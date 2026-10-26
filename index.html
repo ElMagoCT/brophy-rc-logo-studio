@@ -120,6 +120,9 @@ const SCHEMA = [
   {k:'hY',l:'R hole up/down',min:-25,max:25,step:.5,v:0},
   {k:'matchHoles',l:'Match R and C hole sizes',t:'bool',v:false},
   {k:'holeR',l:'Matched hole size',min:20,max:60,step:.5,v:40},
+  {k:'hBox',l:'R hole squared side',min:0,max:150,step:1,v:0,u:'%'},
+  {k:'hCorner',l:'Squared corner fillet',min:0,max:100,step:1,v:35,u:'%'},
+  {k:'hSide',l:'Squared side faces',min:-180,max:180,step:1,v:180,u:'°'},
  ]],
  ['Where R meets C (bottom)', true, [
   {k:'merge',l:'Fill between leg and C',t:'bool',v:false},
@@ -357,7 +360,14 @@ function build(p, opts={}){
   const q=[]; for(let i=0;i<=8;i++){ const t=i/8,u=1-t; q.push([2*u*t*0+t*t*cr, u*u*(-H+cr)+2*u*t*(-H)+t*t*(-H)]); }
   W.push([[0,0],...q,...arcPts(bcx,bcy,Rb,-90,90),[S,y0],[S,0]]);
   W.push(leg);
-  K.push(circ(hx,hy,rH));
+  // R hole: a circle, or a "D" with one side pushed out square (hBox) and filleted (hCorner)
+  if(p.hBox>0){
+    const Lb=rH*p.hBox/100, cf=Math.min(rH,Lb)*p.hCorner/100;
+    const D=[...arcPts(0,0,rH,-90,90)];
+    if(cf>.05) D.push(...arcPts(-Lb+cf,rH-cf,cf,90,180),...arcPts(-Lb+cf,-rH+cf,cf,180,270));
+    else D.push([-Lb,rH],[-Lb,-rH]);
+    K.push(place(D,p.hSide-180,hx,hy));
+  } else K.push(circ(hx,hy,rH));
   // C: disc minus counter minus opening wedge
   W.push(circ(ccx,ccy,Ro));
   K.push(circ(ccx,ccy,Ri));
@@ -537,7 +547,7 @@ function sync(){
   dim(['fSteeple','fSteepleRoot'],P.ant==='none'); dim(['fValley'],P.ant!=='none'); dim(['fInner'],!P.prop&&P.cIcon==='none');
   dim(['blades','pSize','pWidth','pSweep','pRot','hub'],!P.prop);
   dim(['upright','lean','sX','sH','baseW','baseH','door','tiers','tierH','tierGap','taper','tierSlant','mastW','mastGap','crossW','crossY','crossTilt','crossR','round'],P.ant==='none');
-  dim(['holeR'],!P.matchHoles); dim(['cW'],P.matchHoles);
+  dim(['holeR'],!P.matchHoles); dim(['hCorner','hSide'],!P.hBox); dim(['cW'],P.matchHoles);
   dim(['baseW','baseH','flare','door','tiers','tierH','tierGap','taper','tierSlant','mastGap','crossW','crossY','crossTilt'],P.ant!=='steeple');
   dim(['stAng','stLen','stW'],P.cIcon!=='stick'); dim(['ball'],P.cIcon==='none');
   dim(['shape','tileR'],!P.tileOn); if(P.shape!=='rounded') dim(['tileR'],true);
