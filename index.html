@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RC Logo Studio</title>
+<script src="vendor/clipper.js"></script>
+<style>
+:root{--bg:#f1eee9;--panel:#fff;--ink:#1d1b19;--muted:#736d66;--line:#e4dfd8;--accent:#BE1E2D;--chip:#f6f3ef}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151413;--panel:#1f1e1c;--ink:#eeeae4;--muted:#a39d95;--line:#353230;--chip:#2a2826}}
+:root[data-theme="dark"]{--bg:#151413;--panel:#1f1e1c;--ink:#eeeae4;--muted:#a39d95;--line:#353230;--chip:#2a2826}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif}
+.app{display:grid;grid-template-columns:370px 1fr;height:100vh}
+aside{overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:14px 16px 60px}
+main{overflow:auto;padding:22px;display:flex;flex-direction:column;align-items:center;gap:18px}
+h1{font-size:17px;margin:0 0 2px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 12px}
+.bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+button,select{font:inherit;color:var(--ink);background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+details{border-top:1px solid var(--line);padding:6px 0}
+summary{cursor:pointer;font-weight:650;padding:6px 0;list-style:none;display:flex;justify-content:space-between}
+summary::after{content:"+";color:var(--muted)}
+details[open] summary::after{content:"–"}
+.row{display:grid;grid-template-columns:118px 1fr 48px;align-items:center;gap:8px;padding:3px 0}
+.row label{color:var(--muted)}
+.row input[type=range]{width:100%;accent-color:var(--accent)}
+.row output{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
+.row.check{grid-template-columns:1fr auto}
+.row.check input{accent-color:var(--accent);width:16px;height:16px}
+.row select{width:100%;padding:4px 6px}
+.row.col{grid-template-columns:118px 1fr}
+.row input[type=color]{width:100%;height:26px;border:1px solid var(--line);border-radius:6px;background:none;padding:0 2px}
+.row.off{opacity:.38}
+.stage{width:min(620px,100%,calc(100vh - 230px));min-width:280px;aspect-ratio:1;border-radius:20px;display:grid;place-items:center;
+ background-color:#fff;background-image:linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%),linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%);background-size:22px 22px;background-position:0 0,11px 11px;box-shadow:0 1px 0 var(--line),0 10px 30px rgba(0,0,0,.08)}
+.stage.dark{background-color:#1b1a19;background-image:none}
+.stage.light{background-image:none}
+.stage svg{width:100%;height:100%;display:block}
+.tools{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.sizes{display:flex;gap:18px;align-items:end;flex-wrap:wrap;justify-content:center}
+.sizes figure{margin:0;text-align:center;color:var(--muted);font-size:11px}
+.sizes .pair{display:flex;gap:6px;padding:8px;border-radius:10px;background:#fff;border:1px solid var(--line)}
+.sizes .pair+.pair{background:#1b1a19}
+.refs{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;color:var(--muted);font-size:11px}
+.refs img{height:110px;border-radius:10px;background:#fff;border:1px solid var(--line);display:block;margin-bottom:4px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (max-width:880px){.app{grid-template-columns:1fr;height:auto}aside{border-right:0;border-top:1px solid var(--line);order:2}main{padding:16px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <h1>RC Logo Studio</h1>
+  <p class="sub">Brophy RC mark: R + C, prop, tire tread, chapel‑steeple antenna.</p>
+  <div class="bar">
+    <select id="preset" aria-label="Preset"></select>
+    <button id="surprise" title="Random but tasteful">Surprise me</button>
+    <button id="reset">Reset</button>
+  </div>
+  <div id="controls"></div>
+</aside>
+<main>
+  <div class="stage" id="stage"></div>
+  <div class="tools">
+    <button data-bg="checker">Checker</button><button data-bg="light">White</button><button data-bg="dark">Dark</button>
+    <span style="width:10px"></span>
+    <button class="primary" id="dlsvg">Download SVG</button>
+    <button id="dlpng">PNG 2048</button>
+    <button id="copysvg">Copy SVG</button>
+    <button id="share">Copy link to this design</button>
+  </div>
+  <div class="sizes" id="sizes"></div>
+  <div class="refs">
+    <figure style="margin:0"><img src="ref/sketch.png" alt="Your sketch" onerror="this.closest('figure').remove()">Your sketch</figure>
+    <figure style="margin:0"><img src="ref/steeple.png" alt="Steeple reference" onerror="this.closest('figure').remove()">Steeple reference</figure>
+  </div>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- schema: every control in one place ----------
+const PALETTES = {
+  'Brophy red':          {tile:'#BE1E2D', mark:'#FFFFFF', tileOn:true},
+  'White tile':          {tile:'#FFFFFF', mark:'#BE1E2D', tileOn:true},
+  'Black tile':          {tile:'#161616', mark:'#FFFFFF', tileOn:true},
+  'Red on black':        {tile:'#161616', mark:'#D2283A', tileOn:true},
+  'Red mark only':       {tile:'#BE1E2D', mark:'#BE1E2D', tileOn:false},
+  'Black mark only':     {tile:'#161616', mark:'#161616', tileOn:false},
+  'White mark only':     {tile:'#161616', mark:'#FFFFFF', tileOn:false},
+};
+const SCHEMA = [
+ ['Overall', true, [
+  {k:'tilt',l:'Tilt',min:-40,max:15,step:1,v:-13,u:'°'},
+  {k:'scale',l:'Mark size',min:50,max:96,step:1,v:73,u:'%'},
+  {k:'nx',l:'Nudge X',min:-80,max:80,step:1,v:-1},
+  {k:'ny',l:'Nudge Y',min:-80,max:80,step:1,v:0},
+  {k:'guides',l:'Show construction guides',t:'bool',v:false},
+ ]],
+ ['Letter proportions', true, [
+  {k:'H',l:'Cap height',min:140,max:230,step:1,v:176},
+  {k:'S',l:'Stem weight',min:28,max:66,step:1,v:43},
+  {k:'bowl',l:'R bowl height',min:50,max:82,step:1,v:71,u:'%'},
+  {k:'bowlW',l:'Bowl stroke',min:35,max:100,step:1,v:55,u:'%'},
+  {k:'legX',l:'Leg start',min:-40,max:40,step:1,v:6},
+  {k:'legAng',l:'Leg angle',min:5,max:55,step:1,v:30,u:'°'},
+  {k:'legW',l:'Leg weight',min:60,max:140,step:1,v:118,u:'%'},
+  {k:'cSize',l:'C size',min:85,max:115,step:1,v:97,u:'%'},
+  {k:'cW',l:'C weight',min:60,max:140,step:1,v:99,u:'%'},
+  {k:'open',l:'C opening',min:15,max:75,step:1,v:42,u:'°'},
+  {k:'openDir',l:'Opening aim',min:-40,max:40,step:1,v:6,u:'°'},
+  {k:'overlap',l:'R ↔ C overlap',min:0,max:70,step:1,v:25},
+ ]],
+ ['Holes (R counter & C counter)', true, [
+  {k:'hX',l:'R hole left/right',min:-25,max:25,step:.5,v:0},
+  {k:'hY',l:'R hole up/down',min:-25,max:25,step:.5,v:0},
+  {k:'matchHoles',l:'Match R and C hole sizes',t:'bool',v:false},
+  {k:'holeR',l:'Matched hole size',min:20,max:60,step:.5,v:40},
+ ]],
+ ['Where R meets C (bottom)', true, [
+  {k:'merge',l:'Fill between leg and C',t:'bool',v:false},
+  {k:'gap',l:'Separation',min:0,max:24,step:.5,v:6},
+  {k:'gapUp',l:'Separation reach',min:0,max:70,step:1,v:0},
+ ]],
+ ['Tire tread', true, [
+  {k:'treads',l:'Show tread',t:'bool',v:true},
+  {k:'tStyle',l:'Style',t:'select',opts:['lugs','grooves','staggered','chunky'],v:'chunky'},
+  {k:'tCount',l:'Density',min:12,max:48,step:1,v:21},
+  {k:'tDepth',l:'Tread size',min:3,max:26,step:.5,v:9.5},
+  {k:'tWidth',l:'Tread width',min:25,max:85,step:1,v:58,u:'%'},
+  {k:'tTop',l:'Reach over top',min:0,max:200,step:1,v:87,u:'°'},
+  {k:'tBot',l:'Reach under',min:0,max:200,step:1,v:103,u:'°'},
+  {k:'tInset',l:'Start from tip',min:0,max:20,step:.5,v:2,u:'°'},
+ ]],
+ ['Antenna (chapel steeple)', true, [
+  {k:'ant',l:'Style',t:'select',opts:['steeple','mast','none'],v:'steeple'},
+  {k:'upright',l:'Stand upright (ignore tilt)',t:'bool',v:true},
+  {k:'lean',l:'Lean',min:-25,max:25,step:1,v:-14,u:'°'},
+  {k:'sX',l:'Position',min:-40,max:40,step:1,v:0},
+  {k:'sDrop',l:'Sink into notch',min:-20,max:30,step:1,v:4},
+  {k:'sH',l:'Height',min:50,max:170,step:1,v:92},
+  {k:'baseW',l:'Base width',min:14,max:64,step:1,v:30},
+  {k:'baseH',l:'Base height',min:0,max:50,step:1,v:7},
+  {k:'flare',l:'Base flare',min:0,max:120,step:1,v:63,u:'%'},
+  {k:'door',l:'Arched door',t:'bool',v:false},
+  {k:'tiers',l:'Tiers',min:0,max:4,step:1,v:3},
+  {k:'tierH',l:'Tier height',min:3,max:16,step:.5,v:6.5},
+  {k:'tierGap',l:'Tier gap',min:0,max:10,step:.5,v:4.5},
+  {k:'taper',l:'Taper',min:0,max:30,step:1,v:17,u:'%'},
+  {k:'tierSlant',l:'Tier slant',min:-15,max:15,step:1,v:0,u:'°'},
+  {k:'mastW',l:'Mast width',min:4,max:16,step:.5,v:9},
+  {k:'mastGap',l:'Gap under mast',min:0,max:16,step:.5,v:5},
+  {k:'crossW',l:'Cross span',min:12,max:64,step:1,v:23},
+  {k:'crossY',l:'Cross height',min:10,max:70,step:1,v:30,u:'%'},
+  {k:'crossTilt',l:'Cross tilt',min:-30,max:30,step:1,v:0,u:'°'},
+  {k:'crossR',l:'Cross rounding',min:0,max:100,step:1,v:100,u:'%'},
+  {k:'round',l:'Round tier corners',t:'bool',v:true},
+ ]],
+ ['Fillets (round every corner)', true, [
+  {k:'showCorners',l:'Show all corners (or hover a slider)',t:'bool',v:false},
+  {k:'fAll',l:'Set all at once',min:0,max:30,step:.5,v:0},
+  {k:'corner',l:'R top-left',min:0,max:40,step:1,v:40,fx:true},
+  {k:'fFeet',l:'R feet',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fCrotch',l:'Under the R bowl',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fJoin',l:'Leg ↔ C split',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fTipOut',l:'C tips, outside',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fTipIn',l:'C tips, inside',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fValley',l:'Valley R ↔ C',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fTreadTip',l:'Tread tips',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fTreadRoot',l:'Tread roots',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fSteeple',l:'Steeple corners',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fSteepleRoot',l:'Steeple inside corners',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fInner',l:'Prop & stick',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fOtherOut',l:'Any other outside',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fOtherIn',l:'Any other inside',min:0,max:30,step:.5,v:0,fx:true},
+ ]],
+ ['Prop (inside R)', false, [
+  {k:'prop',l:'Show prop',t:'bool',v:true},
+  {k:'blades',l:'Blades',min:2,max:5,step:1,v:3},
+  {k:'pSize',l:'Size',min:50,max:100,step:1,v:86,u:'%'},
+  {k:'pWidth',l:'Blade width',min:20,max:80,step:1,v:40,u:'%'},
+  {k:'pSweep',l:'Sweep',min:-70,max:70,step:1,v:26,u:'°'},
+  {k:'pRot',l:'Spin',min:0,max:360,step:1,v:12,u:'°'},
+  {k:'hub',l:'Hub',min:0,max:40,step:1,v:25,u:'%'},
+ ]],
+ ['Inside the C', false, [
+  {k:'cIcon',l:'Icon',t:'select',opts:['stick','hub','dot','none'],v:'stick'},
+  {k:'stAng',l:'Stick angle',min:-180,max:180,step:1,v:-60,u:'°'},
+  {k:'stLen',l:'Stick length',min:15,max:80,step:1,v:64,u:'%'},
+  {k:'ball',l:'Ball / hub size',min:8,max:60,step:1,v:22,u:'%'},
+  {k:'stW',l:'Stick width',min:5,max:25,step:1,v:15,u:'%'},
+ ]],
+ ['Tile & color', true, [
+  {k:'palette',l:'Palette',t:'select',opts:Object.keys(PALETTES),v:'Brophy red'},
+  {k:'tileOn',l:'Show tile',t:'bool',v:true},
+  {k:'shape',l:'Tile shape',t:'select',opts:['rounded','squircle','circle'],v:'rounded'},
+  {k:'tileR',l:'Corner radius',min:0,max:50,step:1,v:21,u:'%'},
+  {k:'tile',l:'Tile color',t:'color',v:'#BE1E2D'},
+  {k:'mark',l:'Mark color',t:'color',v:'#FFFFFF'},
+ ]],
+];
+const DEF = {}; SCHEMA.forEach(([,,items])=>items.forEach(c=>DEF[c.k]=c.v));
+
+const PRESETS = {
+  'Your design (default)': {},
+  'Closer to sketch': {bowl:70,bowlW:48,legAng:40,legW:112,overlap:22,gap:0,ant:'mast',tDepth:9,tCount:22,tTop:120,tBot:90,cW:90,open:38,openDir:0},
+  'Race day': {tilt:-24,tStyle:'grooves',tDepth:12,tCount:26,gap:8,legAng:40,open:46,openDir:12,tiers:2,sH:84,tTop:130,tBot:90},
+  'Chapel': {sH:128,baseW:36,baseH:22,door:true,tiers:3,tierH:7,tierGap:3,taper:14,crossW:38,crossTilt:0,mastW:9,scale:76,ny:14},
+  'Off-road stamp': {tileOn:false,palette:'Black mark only',tile:'#161616',mark:'#161616',tStyle:'chunky',tDepth:16,tCount:18,tWidth:62,fTreadTip:3,cIcon:'hub',gap:7},
+  'Wheel hub': {cIcon:'hub',ball:44,tCount:32,tDepth:8,tWidth:46,tStyle:'staggered',tTop:140,tBot:100},
+  'Quiet / minimal': {ant:'steeple',tiers:0,baseH:0,sH:74,crossW:28,treads:true,tDepth:6,tCount:30,tWidth:42,prop:true,cIcon:'dot',ball:26,gap:4},
+};
+
+let P = {...DEF};
+
+// ---------- helpers ----------
+const rad = d => d*Math.PI/180;
+const n2 = v => Math.round(v*100)/100;
+const rot = (x,y,a) => { const c=Math.cos(rad(a)), s=Math.sin(rad(a)); return [x*c-y*s, x*s+y*c]; };
+// smooth closed path through points (Catmull-Rom -> cubic)
+function smooth(pts){
+  const N=pts.length; let d=`M${n2(pts[0][0])} ${n2(pts[0][1])}`;
+  for(let i=0;i<N;i++){
+    const p0=pts[(i-1+N)%N],p1=pts[i],p2=pts[(i+1)%N],p3=pts[(i+2)%N];
+    d+=`C${n2(p1[0]+(p2[0]-p0[0])/6)} ${n2(p1[1]+(p2[1]-p0[1])/6)} ${n2(p2[0]-(p3[0]-p1[0])/6)} ${n2(p2[1]-(p3[1]-p1[1])/6)} ${n2(p2[0])} ${n2(p2[1])}`;
+  }
+  return d+'Z';
+}
+// ---------- outline helpers: the mark is built as real polygons so every corner can be filleted ----------
+const SEG=2.4; // longest straight piece used to draw a curve (mark units)
+function arcPts(cx,cy,r,a0,a1){
+  const n=Math.max(2,Math.ceil(Math.abs(rad(a1-a0))*r/SEG),Math.ceil(Math.abs(a1-a0)/9)), out=[];
+  for(let i=0;i<=n;i++){ const a=rad(a0+(a1-a0)*i/n); out.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]); }
+  return out;
+}
+const circ=(cx,cy,r)=>arcPts(cx,cy,r,0,360).slice(0,-1);
+function rectPts(x,y,w,h,r=0){
+  r=Math.max(0,Math.min(r,w/2,h/2));
+  if(r<.05) return [[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
+  return [...arcPts(x+w-r,y+r,r,-90,0),...arcPts(x+w-r,y+h-r,r,0,90),...arcPts(x+r,y+h-r,r,90,180),...arcPts(x+r,y+r,r,180,270)];
+}
+// rotate by a degrees about (ox,oy), then move by (tx,ty)
+const place=(pts,a=0,tx=0,ty=0,ox=0,oy=0)=>pts.map(([x,y])=>{ const [u,v]=rot(x-ox,y-oy,a); return [u+ox+tx,v+oy+ty]; });
+function capsule(x1,y1,x2,y2,w){ const t=Math.atan2(y2-y1,x2-x1)*180/Math.PI; return [...arcPts(x2,y2,w/2,t-90,t+90),...arcPts(x1,y1,w/2,t+90,t+270)]; }
+function band(x1,y1,x2,y2,w){ const L=Math.hypot(x2-x1,y2-y1)||1, nx=-(y2-y1)/L*w/2, ny=(x2-x1)/L*w/2; return [[x1+nx,y1+ny],[x2+nx,y2+ny],[x2-nx,y2-ny],[x1-nx,y1-ny]]; }
+function smoothPts(pts,steps=5){ // closed Catmull-Rom through pts, sampled
+  const N=pts.length, out=[];
+  for(let i=0;i<N;i++){
+    const p0=pts[(i-1+N)%N],p1=pts[i],p2=pts[(i+1)%N],p3=pts[(i+2)%N];
+    const c1=[p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6], c2=[p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6];
+    for(let s=0;s<steps;s++){ const t=s/steps,u=1-t; out.push([u*u*u*p1[0]+3*u*u*t*c1[0]+3*u*t*t*c2[0]+t*t*t*p2[0], u*u*u*p1[1]+3*u*u*t*c1[1]+3*u*t*t*c2[1]+t*t*t*p2[1]]); }
+  }
+  return out;
+}
+function circleHits(x1,y1,r1,x2,y2,r2){
+  const d=Math.hypot(x2-x1,y2-y1); if(d>r1+r2||d<Math.abs(r1-r2)||!d) return null;
+  const a=(r1*r1-r2*r2+d*d)/(2*d), h=Math.sqrt(Math.max(0,r1*r1-a*a));
+  const mx=x1+a*(x2-x1)/d, my=y1+a*(y2-y1)/d;
+  return [[mx+h*(y2-y1)/d, my-h*(x2-x1)/d],[mx-h*(y2-y1)/d, my+h*(x2-x1)/d]];
+}
+
+// ---------- boolean ops (Clipper works in integers) ----------
+const SC=1000, CL=ClipperLib;
+const toC=pts=>{ const q=pts.map(([x,y])=>({X:Math.round(x*SC),Y:Math.round(y*SC)})); if(!CL.Clipper.Orientation(q)) q.reverse(); return q; };
+const fromC=paths=>paths.map(q=>q.map(o=>[o.X/SC,o.Y/SC]));
+function clip(type,subj,cl=[]){
+  const c=new CL.Clipper(); c.AddPaths(subj,CL.PolyType.ptSubject,true); if(cl.length) c.AddPaths(cl,CL.PolyType.ptClip,true);
+  const out=new CL.Paths(); c.Execute(type,out,CL.PolyFillType.pftNonZero,CL.PolyFillType.pftNonZero);
+  return CL.Clipper.CleanPolygons(out,.02*SC); // small enough that tight curves never read as corners
+}
+
+// ---------- fillets ----------
+const SHARP=rad(24); // a vertex turning more than this is a corner (curves turn at most 9° per point)
+const area=r=>{ let a=0; for(let i=0;i<r.length;i++){ const p=r[i],q=r[(i+1)%r.length]; a+=p[0]*q[1]-q[0]*p[1]; } return a/2; };
+const dist=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1]);
+// cubic that approximates a circular fillet from a to b, tangent to the corner's two edges
+function filletCurve(a,v,b){
+  const da=dist(a,v), db=dist(v,b); if(da<1e-6||db<1e-6) return [a,b];
+  const u1=[(v[0]-a[0])/da,(v[1]-a[1])/da], u2=[(b[0]-v[0])/db,(b[1]-v[1])/db];
+  const phi=Math.atan2(Math.abs(u1[0]*u2[1]-u1[1]*u2[0]),u1[0]*u2[0]+u1[1]*u2[1]); if(phi<1e-3) return [a,b];
+  const r=(da+db)/2/Math.tan(phi/2), h=4/3*Math.tan(phi/4)*r;
+  const c1=[a[0]+u1[0]*Math.min(h,da),a[1]+u1[1]*Math.min(h,da)], c2=[b[0]-u2[0]*Math.min(h,db),b[1]-u2[1]*Math.min(h,db)];
+  const m=Math.max(3,Math.ceil(phi/rad(8))), out=[];
+  for(let i=0;i<=m;i++){ const t=i/m,u=1-t; out.push([u*u*u*a[0]+3*u*u*t*c1[0]+3*u*t*t*c2[0]+t*t*t*b[0], u*u*u*a[1]+3*u*u*t*c1[1]+3*u*t*t*c2[1]+t*t*t*b[1]]); }
+  return out;
+}
+// round every corner of every ring; radiusOf(point, convex) -> {g: group, r: radius}
+function fillet(rings, radiusOf){
+  let ref=1, best=0; rings.forEach(r=>{ const a=area(r); if(Math.abs(a)>best){ best=Math.abs(a); ref=Math.sign(a); } });
+  const marks=[];
+  const out=rings.map(R=>{
+    const n=R.length; if(n<3) return R;
+    const s=[0]; for(let i=1;i<=n;i++) s.push(s[i-1]+dist(R[i-1],R[i%n])); const L=s[n];
+    const cs=[];
+    for(let i=0;i<n;i++){
+      const A=R[(i-1+n)%n], V=R[i], B=R[(i+1)%n], e1=[V[0]-A[0],V[1]-A[1]], e2=[B[0]-V[0],B[1]-V[1]];
+      const cr=e1[0]*e2[1]-e1[1]*e2[0], phi=Math.atan2(Math.abs(cr),e1[0]*e2[0]+e1[1]*e2[1]);
+      if(phi<SHARP) continue;
+      // material is on the same side for outer rings and holes, so compare against the outer orientation
+      const convex=Math.sign(cr)===ref, g=radiusOf(V,convex);
+      cs.push({i,phi,r:g.r}); marks.push({x:V[0],y:V[1],g:g.g});
+    }
+    if(!cs.length) return R;
+    const wrap=d=>(d%L+L)%L;
+    // a fillet never takes more than 45% of the way to the next corner, so neighbours never collide
+    cs.forEach((c,k)=>{ const pv=cs[(k-1+cs.length)%cs.length], nx=cs[(k+1)%cs.length];
+      const dp=cs.length>1?wrap(s[c.i]-s[pv.i]):L, dn=cs.length>1?wrap(s[nx.i]-s[c.i]):L;
+      c.d=Math.min(c.r*Math.tan(c.phi/2),.45*dp,.45*dn,L/4); });
+    const live=cs.filter(c=>c.r>0&&c.d>.05); if(!live.length) return R;
+    const around=(a,b)=>{ const d=Math.abs(a-b)%L; return Math.min(d,L-d); };
+    const at=t=>{ t=wrap(t); let lo=0,hi=n; while(hi-lo>1){ const m=(lo+hi)>>1; if(s[m]<=t) lo=m; else hi=m; }
+      const a=R[lo], b=R[(lo+1)%n], f=(t-s[lo])/((s[lo+1]-s[lo])||1); return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]; };
+    const centers=new Map(live.map(c=>[c.i,c])), res=[];
+    for(let j=0;j<n;j++){
+      const c=centers.get(j);
+      if(c) res.push(...filletCurve(at(s[j]-c.d),R[j],at(s[j]+c.d)));
+      else if(!live.some(q=>around(s[j],s[q.i])<q.d)) res.push(R[j]);
+    }
+    return res;
+  });
+  return {rings:out, marks};
+}
+
+// one swept prop blade pointing up from the hub
+function blade(len, root, width, sweepDeg){
+  const N=18, L=[], R=[], sw=rad(sweepDeg);
+  const c = t => { const r=root+t*(len-root), th=sw*t*t; return [r*Math.sin(th), -r*Math.cos(th)]; };
+  for(let i=0;i<=N;i++){
+    const t=i/N, p=c(t), q=c(Math.min(1,t+.01)), o=c(Math.max(0,t-.01));
+    let tx=q[0]-o[0], ty=q[1]-o[1]; const m=Math.hypot(tx,ty)||1; tx/=m; ty/=m;
+    const w = width/2*Math.pow(Math.max(0,Math.sin(Math.PI*(.07+.93*t))),.55);
+    // leading edge straighter, trailing edge fuller
+    L.push([p[0]-ty*w*.72, p[1]+tx*w*.72]); R.push([p[0]+ty*w*1.28, p[1]-tx*w*1.28]);
+  }
+  return smoothPts(L.concat(R.slice(0,-1).reverse()).filter((p,i,a)=>i===0||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>.4));
+}
+
+// ---------- the mark ----------
+function build(p, opts={}){
+  const S=p.S, H=p.H;
+  const bowlH=H*p.bowl/100, Rb=bowlH/2, bs=Math.min(S*p.bowlW/100, Rb-8), rc=Rb-bs;
+  const bcx=S+rc+bs*.2, bcy=-H+Rb, y0=-H+bowlH;
+  // the R hole (and prop) can slide and resize inside the bowl without moving the letter
+  const hx=bcx+p.hX, hy=bcy+p.hY, rH=p.matchHoles?Math.min(p.holeR,Rb-6):rc;
+  const cr=Math.min(p.corner,S/2,Rb);
+  const tA=Math.tan(rad(p.legAng)), Lw=S*p.legW/100;
+  const lx0=Math.max(S*.35, bcx-rc*.5+p.legX), e=bs*.9;
+  const leg=[[lx0-tA*e,y0-e],[lx0+Lw-tA*e,y0-e],[lx0+Lw-tA*y0,0],[lx0-tA*y0,0]];
+  const Ro=H/2*p.cSize/100, T=Math.min(S*p.cW/100,Ro-10), Ri=p.matchHoles?Math.min(p.holeR,Ro-8):Ro-T, ccy=-Ro;
+  const ccx=bcx+Rb+Ro-p.overlap;
+  const W=[], K=[], TOP=[], TOPdone=[]; // filled shapes, knockouts, shapes laid on top (prop, stick)
+  // R: stem + bowl (the top-left corner keeps its own quadratic rounding)
+  const q=[]; for(let i=0;i<=8;i++){ const t=i/8,u=1-t; q.push([2*u*t*0+t*t*cr, u*u*(-H+cr)+2*u*t*(-H)+t*t*(-H)]); }
+  W.push([[0,0],...q,...arcPts(bcx,bcy,Rb,-90,90),[S,y0],[S,0]]);
+  W.push(leg);
+  K.push(circ(hx,hy,rH));
+  // C: disc minus counter minus opening wedge
+  W.push(circ(ccx,ccy,Ro));
+  K.push(circ(ccx,ccy,Ri));
+  const od=p.openDir, a1=od-p.open, a2=od+p.open, far=Ro*3, ray=a=>[ccx+far*Math.cos(rad(a)),ccy+far*Math.sin(rad(a))];
+  K.push([[ccx,ccy],ray(a1),ray(od),ray(a2)]);
+  // fill the pocket between R leg, bowl and C
+  const BR=leg[2], fx=Math.max(ccx, BR[0]+1);
+  const ux=BR[0]-leg[1][0], uy=BR[1]-leg[1][1], ul=Math.hypot(ux,uy), tp=((ccx-leg[1][0])*ux+(ccy-leg[1][1])*uy)/ul;
+  const Tp=[leg[1][0]+ux/ul*tp, leg[1][1]+uy/ul*tp]; // where the leg edge passes closest to the C
+  if(p.merge) W.push([leg[1],[bcx,bcy],[fx,bcy],[fx,0],BR]);
+  else W.push([leg[1],[bcx,bcy],[ccx,bcy],[ccx,ccy],Tp]);
+  // separation along the leg's right edge
+  const gTop=[lx0+Lw-tA*p.gapUp, y0-p.gapUp], gBot=[BR[0]+tA*30, 30];
+  if(p.gap>0) K.push(band(gTop[0],gTop[1],gBot[0],gBot[1],p.gap));
+  // tire tread around the C's free edge
+  if(p.treads && p.tDepth>0){
+    const pitch=360/p.tCount, wl=rad(pitch)*Ro*p.tWidth/100, sides=[[a1,-1,p.tTop],[a2,1,p.tBot]];
+    sides.forEach(([start,dir,reach])=>{
+      for(let i=0;;i++){
+        const off=p.tInset+pitch*(i+.5); if(off>reach) break;
+        const a=start+dir*off, alt=(p.tStyle==='staggered'&&i%2), d=p.tDepth*(alt?.55:1)*(p.tStyle==='chunky'?1.15:1);
+        const w=wl*(p.tStyle==='chunky'?1.25:1);
+        if(p.tStyle==='grooves'){
+          const rr=Ro-d/2+1; K.push(place(rectPts(-w/2,-(d+2)/2,w,d+2),a+90,ccx+rr*Math.cos(rad(a)),ccy+rr*Math.sin(rad(a))));
+        } else {
+          const rr=Ro+d/2-4, shape=p.tStyle==='chunky' // trapezoid lug, wider at the root
+            ? [[-w*.62,(d+8)/2],[w*.62,(d+8)/2],[w*.42,-(d+8)/2],[-w*.42,-(d+8)/2]] : rectPts(-w/2,-(d+8)/2,w,d+8);
+          W.push(place(shape,a+90,ccx+rr*Math.cos(rad(a)),ccy+rr*Math.sin(rad(a))));
+        }
+      }
+    });
+  }
+  // antenna, rooted in the valley between the R bowl and the C
+  const hit=circleHits(bcx,bcy,Rb,ccx,ccy,Ro);
+  const hp=hit?(hit[0][1]<hit[1][1]?hit[0]:hit[1]):[(bcx+ccx)/2,-H];
+  let st=null;
+  if(p.ant!=='none'){
+    const nx=hp[0]+p.sX, ny=Math.max(hp[1],-H)+p.sDrop, depth=30;
+    const ar=(p.upright?-p.tilt:0)+p.lean, G=[], GK=[];
+    const mw=p.mastW, rr=mw/2*p.crossR/100;
+    let top, half;
+    if(p.ant==='steeple'){
+      const bw=p.baseW, fl=depth*p.flare/100; half=bw/2+fl;
+      G.push([[-bw/2,-p.baseH],[bw/2,-p.baseH],[bw/2+fl,depth],[-bw/2-fl,depth]]);
+      if(p.door && p.baseH>=8){ const dw=Math.min(bw*.36,p.baseH*.9), yt=-p.baseH*.78; GK.push([[-dw/2,4],...arcPts(0,yt+dw/2,dw/2,180,360),[dw/2,4]]); }
+      let y=-p.baseH;
+      for(let i=0;i<p.tiers;i++){
+        const w=bw*(1-p.taper/100*(i+1)); y-=p.tierGap;
+        const th=p.tierH, r=p.round?Math.min(2,th/2):0; // blocky steps, like the chapel tower
+        G.push(place(rectPts(-w/2,y-th,w,th+(p.tierGap?0:1),r),p.tierSlant,0,0,0,y-th/2)); y-=th;
+      }
+      y-=p.mastGap;
+      top=Math.min(-p.sH, y-14);
+      G.push(rectPts(-mw/2,top,mw,y-top+(p.mastGap?0:1),rr));
+      const yc=top+(y-top)*p.crossY/100;
+      G.push(place(rectPts(-p.crossW/2,yc-mw/2,p.crossW,mw,rr),p.crossTilt,0,0,0,yc));
+    } else { // plain transmitter mast with a ball tip
+      top=-p.sH*.8; half=mw;
+      G.push(rectPts(-mw/2,top,mw,depth-top,rr), circ(0,top,mw*.95));
+    }
+    G.forEach(g=>W.push(place(g,ar,nx,ny))); GK.forEach(g=>K.push(place(g,ar,nx,ny)));
+    st={nx,ny,ar,half,top,depth};
+  }
+  // prop in the R counter
+  if(p.prop){
+    const len=rH*p.pSize/100, hub=rH*p.hub/100, bl=blade(len, Math.max(2,hub*.55), rH*p.pWidth/100, p.pSweep);
+    for(let i=0;i<p.blades;i++) TOP.push(place(bl,p.pRot+i*360/p.blades,hx,hy));
+    if(hub>0) TOP.push(circ(hx,hy,hub));
+  }
+  // inside the C
+  if(p.cIcon==='stick'){
+    const L=Ri*p.stLen/100, c=Math.cos(rad(p.stAng)), s=Math.sin(rad(p.stAng));
+    TOP.push(capsule(ccx-L*.18*c,ccy-L*.18*s,ccx+L*c,ccy+L*s,Ri*p.stW/100), circ(ccx+L*c,ccy+L*s,Ri*p.ball/100));
+  } else if(p.cIcon==='hub'){
+    const r=Ri*p.ball/100, holes=[];
+    for(let i=0;i<5;i++){ const a=rad(-90+i*72); holes.push(toC(circ(ccx+r*.56*Math.cos(a),ccy+r*.56*Math.sin(a),r*.16))); }
+    TOPdone.push(...clip(CL.ClipType.ctDifference,[toC(circ(ccx,ccy,r))],holes));
+  } else if(p.cIcon==='dot'){
+    TOP.push(circ(ccx,ccy,Ri*p.ball/100));
+  }
+  // union, cut, lay the icons on top
+  let body=clip(CL.ClipType.ctUnion,W.map(toC));
+  body=clip(CL.ClipType.ctDifference,body,K.map(toC));
+  body=clip(CL.ClipType.ctUnion,[...body,...TOP.map(toC),...TOPdone]);
+  // name each corner by where it sits, so each region gets its own fillet slider
+  const near=(x,y,a)=>{ const d=((Math.atan2(y-ccy,x-ccx)*180/Math.PI-a)%360+540)%360-180; return Math.abs(d)<7; };
+  const legDist=(x,y)=>{ const vx=gBot[0]-gTop[0], vy=gBot[1]-gTop[1]; return Math.abs((x-gTop[0])*vy-(y-gTop[1])*vx)/Math.hypot(vx,vy); };
+  const radiusOf=([x,y],cv)=>{
+    const g=(()=>{
+      if(st){ const [lx,ly]=rot(x-st.nx,y-st.ny,-st.ar); if(Math.abs(lx)<st.half+3 && ly<st.depth && ly>st.top-14) return cv?'fSteeple':'fSteepleRoot'; }
+      if(Math.hypot(x-hx,y-hy)<rH-.3 || Math.hypot(x-ccx,y-ccy)<Ri-.3) return 'fInner';
+      if(cv && Math.abs(y)<2.5 && x<ccx-Ri*.3) return 'fFeet';
+      if(!cv && Math.abs(y-y0)<6 && x>S-6 && x<lx0+6) return 'fCrotch';
+      if(y>gTop[1]-8 && y<12 && legDist(x,y)<p.gap/2+8) return 'fJoin';
+      const dc=Math.hypot(x-ccx,y-ccy);
+      if(near(x,y,a1)||near(x,y,a2)){ if(Math.abs(dc-Ro)<4) return 'fTipOut'; if(Math.abs(dc-Ri)<4) return 'fTipIn'; }
+      if(!cv && Math.hypot(x-hp[0],y-hp[1])<22) return 'fValley';
+      if(p.treads && dc>Ri+1 && dc<Ro+p.tDepth*1.3+2 && !(x<ccx && Math.hypot(x-bcx,y-bcy)<Rb+4)) return cv?'fTreadTip':'fTreadRoot';
+      return cv?'fOtherOut':'fOtherIn';
+    })();
+    return {g, r:p[g]||0};
+  };
+  const F=fillet(fromC(body), radiusOf);
+  // construction guides (preview only)
+  let guides='';
+  if(opts.guides){
+    const s='fill="none" stroke="#18a3c9" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="4 3"';
+    guides=`<g ${s}><path d="M-60 0H${n2(ccx+Ro+60)}M-60 ${-H}H${n2(ccx+Ro+60)}M-60 ${n2(y0)}H${n2(bcx+40)}"/><circle cx="${n2(bcx)}" cy="${n2(bcy)}" r="${n2(Rb)}"/><circle cx="${n2(hx)}" cy="${n2(hy)}" r="${n2(rH)}"/><circle cx="${n2(ccx)}" cy="${n2(ccy)}" r="${n2(Ro)}"/><circle cx="${n2(ccx)}" cy="${n2(ccy)}" r="${n2(Ri)}"/></g>`;
+  }
+  return {rings:F.rings, marks:F.marks, guides};
+}
+
+const MARK_COLORS={fFeet:'#ff9f1c',fCrotch:'#2ec4b6',fJoin:'#e71d36',fTipOut:'#8338ec',fTipIn:'#c77dff',fValley:'#3a86ff',fTreadTip:'#06d6a0',fTreadRoot:'#118ab2',fSteeple:'#ffbe0b',fSteepleRoot:'#fb5607',fInner:'#ff006e',fOtherOut:'#8d99ae',fOtherIn:'#2b2d42'};
+function makeSVG(p, opts={}){
+  const g=build(p, opts), Z=512;
+  // fit the rotated mark into the tile
+  const R=g.rings.map(r=>r.map(([x,y])=>rot(x,y,p.tilt)));
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  R.forEach(r=>r.forEach(([a,b])=>{ x0=Math.min(x0,a);x1=Math.max(x1,a);y0=Math.min(y0,b);y1=Math.max(y1,b); }));
+  const k=Math.min(Z*p.scale/100/(x1-x0), Z*p.scale/100/(y1-y0));
+  const tx=Z/2+p.nx-k*(x0+x1)/2, ty=Z/2+p.ny-k*(y0+y1)/2;
+  const d=R.map(r=>'M'+r.map(([x,y])=>n2(tx+k*x)+' '+n2(ty+k*y)).join('L')+'Z').join('');
+  let tile='';
+  if(p.tileOn){
+    if(p.shape==='circle') tile=`<circle cx="256" cy="256" r="256" fill="${p.tile}"/>`;
+    else if(p.shape==='squircle'){ const q=[]; for(let i=0;i<96;i++){ const t=i/96*2*Math.PI, c=Math.cos(t), s=Math.sin(t); q.push([256+256*Math.sign(c)*Math.pow(Math.abs(c),2/5), 256+256*Math.sign(s)*Math.pow(Math.abs(s),2/5)]); } tile=`<path d="${smooth(q)}" fill="${p.tile}"/>`; }
+    else tile=`<rect width="512" height="512" rx="${n2(Z*p.tileR/100)}" fill="${p.tile}"/>`;
+  }
+  let marks='';
+  if(opts.marks){
+    marks=g.marks.filter(m=>opts.marks==='all'||m.g===opts.marks).map(m=>{ const [x,y]=rot(m.x,m.y,p.tilt);
+      return `<circle cx="${n2(tx+k*x)}" cy="${n2(ty+k*y)}" r="${opts.marks==='all'?4:5.5}" fill="${MARK_COLORS[m.g]}" stroke="#fff" stroke-width="1.5"/>`; }).join('');
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">`+tile+
+    `<path d="${d}" fill="${p.mark}"/>`+
+    (g.guides?`<g transform="translate(${n2(tx)} ${n2(ty)}) scale(${n2(k*1000)/1000}) rotate(${p.tilt})">${g.guides}</g>`:'')+marks+`</svg>`;
+}
+
+// ---------- UI ----------
+const $=s=>document.querySelector(s), controls=$('#controls'), stage=$('#stage');
+const inputs={};
+let hoverG=null;
+function buildUI(){
+  SCHEMA.forEach(([title,open,items])=>{
+    const d=document.createElement('details'); if(open) d.open=true;
+    d.innerHTML=`<summary>${title}</summary>`;
+    items.forEach(c=>{
+      const row=document.createElement('div'); row.className='row'; row.dataset.k=c.k;
+      if(c.t==='bool'){ row.classList.add('check'); row.innerHTML=`<label for="c_${c.k}">${c.l}</label><input type="checkbox" id="c_${c.k}">`; }
+      else if(c.t==='select'){ row.classList.add('col'); row.innerHTML=`<label for="c_${c.k}">${c.l}</label><select id="c_${c.k}">${c.opts.map(o=>`<option>${o}</option>`).join('')}</select>`; }
+      else if(c.t==='color'){ row.classList.add('col'); row.innerHTML=`<label for="c_${c.k}">${c.l}</label><input type="color" id="c_${c.k}">`; }
+      else row.innerHTML=`<label for="c_${c.k}">${c.l}</label><input type="range" id="c_${c.k}" min="${c.min}" max="${c.max}" step="${c.step}"><output></output>`;
+      const el=row.querySelector('input,select'); inputs[c.k]={el,c,row};
+      el.addEventListener('input',()=>{
+        P[c.k]= c.t==='bool'?el.checked : (c.t==='select'||c.t==='color')?el.value : +el.value;
+        if(c.k==='palette'){ Object.assign(P,PALETTES[el.value]); sync(); }
+        if(c.k==='fAll'){ SCHEMA.forEach(([,,it])=>it.forEach(o=>{ if(o.fx) P[o.k]=Math.min(o.max,P.fAll); })); sync(); }
+        update();
+      });
+      // hovering a fillet slider highlights the corners it controls
+      if(c.fx||c.k==='fAll'){ const on=()=>{ hoverG=c.k==='fAll'?'all':c.k; update(); }, off=()=>{ hoverG=null; update(); };
+        row.addEventListener('mouseenter',on); row.addEventListener('mouseleave',off); el.addEventListener('focus',on); el.addEventListener('blur',off); }
+      el.addEventListener('dblclick',()=>{ P[c.k]=DEF[c.k]; sync(); update(); });
+      d.appendChild(row);
+    });
+    controls.appendChild(d);
+  });
+}
+function sync(){
+  for(const k in inputs){ const {el,c,row}=inputs[k];
+    if(c.t==='bool') el.checked=!!P[k]; else el.value=P[k];
+    const o=row.querySelector('output'); if(o) o.textContent=P[k]+(c.u&&c.u.length<3?c.u:'');
+  }
+  // dim controls that do nothing in the current state
+  const dim=(keys,off)=>keys.forEach(k=>inputs[k].row.classList.toggle('off',off));
+  dim(['tStyle','tCount','tDepth','tWidth','tTop','tBot','tInset','fTreadTip','fTreadRoot'],!P.treads);
+  dim(['fSteeple','fSteepleRoot'],P.ant==='none'); dim(['fValley'],P.ant!=='none'); dim(['fInner'],!P.prop&&P.cIcon==='none');
+  dim(['blades','pSize','pWidth','pSweep','pRot','hub'],!P.prop);
+  dim(['upright','lean','sX','sH','baseW','baseH','door','tiers','tierH','tierGap','taper','tierSlant','mastW','mastGap','crossW','crossY','crossTilt','crossR','round'],P.ant==='none');
+  dim(['holeR'],!P.matchHoles); dim(['cW'],P.matchHoles);
+  dim(['baseW','baseH','flare','door','tiers','tierH','tierGap','taper','tierSlant','mastGap','crossW','crossY','crossTilt'],P.ant!=='steeple');
+  dim(['stAng','stLen','stW'],P.cIcon!=='stick'); dim(['ball'],P.cIcon==='none');
+  dim(['shape','tileR'],!P.tileOn); if(P.shape!=='rounded') dim(['tileR'],true);
+  dim(['gapUp'],!P.gap);
+}
+let raf=0;
+function update(){
+  const o=inputs; for(const k in o){ const out=o[k].row.querySelector('output'); if(out) out.textContent=P[k]+(o[k].c.u&&o[k].c.u.length<3?o[k].c.u:''); }
+  cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{
+    sync();
+    stage.innerHTML=makeSVG(P,{guides:P.guides,marks:hoverG||(P.showCorners?'all':null)});
+    const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(makeSVG(P));
+    $('#sizes').innerHTML=['light','dark'].map(()=>`<div class="pair">${[16,24,32,48,64,128].map(s=>`<img src="${url}" width="${s}" height="${s}" alt="${s}px" title="${s}px">`).join('')}</div>`).join('');
+    try{ localStorage.setItem('rc-logo-studio',JSON.stringify(P)); }catch(e){}
+  });
+}
+function diff(){ const d={}; for(const k in P) if(P[k]!==DEF[k]) d[k]=P[k]; return d; }
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),1600); }
+function download(name, blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+
+$('#preset').innerHTML='<option value="">Presets…</option>'+Object.keys(PRESETS).map(k=>`<option>${k}</option>`).join('');
+$('#preset').addEventListener('change',e=>{ if(!e.target.value) return; P={...DEF,...PRESETS[e.target.value]}; sync(); update(); e.target.value=''; });
+$('#reset').onclick=()=>{ P={...DEF}; sync(); update(); };
+$('#surprise').onclick=()=>{
+  const r=(a,b,s=1)=>Math.round((a+Math.random()*(b-a))/s)*s, pick=a=>a[Math.floor(Math.random()*a.length)];
+  Object.assign(P,{tilt:r(-28,-8),bowl:r(60,72),legAng:r(24,44),open:r(32,50),openDir:r(-6,16),overlap:r(18,40),
+    gap:pick([0,4,6,8,10]),merge:Math.random()>.25,tStyle:pick(['lugs','grooves','staggered','chunky']),tCount:r(18,32),tDepth:r(6,15,.5),tWidth:r(40,64),
+    tiers:r(0,3),tierGap:pick([0,2.5,3.5,5]),sH:r(78,120),crossTilt:pick([0,0,-12,-18]),door:Math.random()>.7,baseH:r(4,22),
+    blades:pick([2,3,3,3,4]),pSweep:r(10,50),pRot:r(0,359),cIcon:pick(['stick','stick','hub','dot'])});
+  sync(); update();
+};
+document.querySelectorAll('[data-bg]').forEach(b=>b.onclick=()=>{ stage.classList.remove('dark','light'); if(b.dataset.bg!=='checker') stage.classList.add(b.dataset.bg); });
+$('#dlsvg').onclick=()=>download('brophy-rc-logo.svg', new Blob([makeSVG(P)],{type:'image/svg+xml'}));
+$('#copysvg').onclick=()=>navigator.clipboard.writeText(makeSVG(P)).then(()=>toast('SVG copied'));
+$('#dlpng').onclick=()=>{
+  const img=new Image(), c=document.createElement('canvas'); c.width=c.height=2048;
+  img.onload=()=>{ c.getContext('2d').drawImage(img,0,0,2048,2048); c.toBlob(b=>download('brophy-rc-logo.png',b),'image/png'); };
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(makeSVG(P));
+};
+$('#share').onclick=()=>{ const u=location.href.split('#')[0]+'#'+encodeURIComponent(JSON.stringify(diff())); history.replaceState(null,'',u); navigator.clipboard.writeText(u).then(()=>toast('Link copied'),()=>toast('Link is in the address bar')); };
+
+const q=new URLSearchParams(location.search);
+if(q.has('svg')){ document.body.textContent=makeSVG({...DEF,...JSON.parse(q.get('svg')||'{}')}); throw 0; }
+if(q.has('sheet')){
+  document.body.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;padding:20px">'+
+    (q.get('sheet')?JSON.parse(q.get('sheet')):Object.entries(PRESETS)).map(([n,v])=>`<a href="./#${encodeURIComponent(JSON.stringify(v))}" style="color:inherit;text-decoration:none;text-align:center">${makeSVG({...DEF,...v},{guides:v.guides,marks:v.marks}).replace('<svg ','<svg style="width:100%;height:auto;display:block;background:#fff;border-radius:16px" ')}<div style="margin-top:6px">${n}</div></a>`).join('')+'</div>';
+  throw 0;
+}
+buildUI();
+try{
+  if(location.hash.length>1) P={...DEF,...JSON.parse(decodeURIComponent(location.hash.slice(1)))};
+  else { const s=localStorage.getItem('rc-logo-studio'); if(s) P={...DEF,...JSON.parse(s)}; }
+}catch(e){ P={...DEF}; }
+sync(); update();
+window.RC={makeSVG,get P(){return P},set P(v){P=v;sync();update();},DEF,PRESETS};
+</script>
+</body>
+</html>

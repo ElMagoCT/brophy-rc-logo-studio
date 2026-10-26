@@ -1,0 +1,5 @@
+# local-only references and old exports
+ref/
+brophy-rc-logo.svg
+brophy-rc-mark-red.svg
+.DS_Store
