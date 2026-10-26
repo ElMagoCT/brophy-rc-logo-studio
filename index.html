@@ -72,6 +72,7 @@ details[open] summary::after{content:"–"}
     <button id="dlpng">PNG 2048</button>
     <button id="copysvg">Copy SVG</button>
     <button id="share">Copy link to this design</button>
+    <button id="opensvg" title="Load the settings saved inside an SVG exported from here">Open SVG…</button><input type="file" id="svgfile" accept=".svg,image/svg+xml" hidden>
   </div>
   <div class="sizes" id="sizes"></div>
   <div class="refs">
@@ -168,14 +169,14 @@ const SCHEMA = [
   {k:'fAll',l:'Set all at once',min:0,max:30,step:.5,v:0},
   {k:'corner',l:'R top-left',min:0,max:40,step:1,v:40,fx:true},
   {k:'fFeet',l:'R feet',min:0,max:30,step:.5,v:0,fx:true},
-  {k:'fCrotch',l:'Under the R bowl',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fCrotch',l:'Under the R bowl',min:0,max:30,step:.5,v:17.5,fx:true},
   {k:'fJoin',l:'Leg ↔ C split',min:0,max:30,step:.5,v:0,fx:true},
   {k:'fTipOut',l:'C tips, outside',min:0,max:30,step:.5,v:0,fx:true},
-  {k:'fTipIn',l:'C tips, inside',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fTipIn',l:'C tips, inside',min:0,max:30,step:.5,v:10.5,fx:true},
   {k:'fValley',l:'Valley R ↔ C',min:0,max:30,step:.5,v:0,fx:true},
-  {k:'fTreadTip',l:'Tread tips',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fTreadTip',l:'Tread tips',min:0,max:30,step:.5,v:5.5,fx:true},
   {k:'fTreadRoot',l:'Tread roots',min:0,max:30,step:.5,v:0,fx:true},
-  {k:'fSteeple',l:'Steeple corners',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fSteeple',l:'Steeple corners',min:0,max:30,step:.5,v:5.5,fx:true},
   {k:'fSteepleRoot',l:'Steeple inside corners',min:0,max:30,step:.5,v:0,fx:true},
   {k:'fInner',l:'Prop & stick',min:0,max:30,step:.5,v:0,fx:true},
   {k:'fOtherOut',l:'Any other outside',min:0,max:30,step:.5,v:0,fx:true},
@@ -501,7 +502,9 @@ function makeSVG(p, opts={}){
     marks=g.marks.filter(m=>opts.marks==='all'||m.g===opts.marks).map(m=>{ const [x,y]=rot(m.x,m.y,p.tilt);
       return `<circle cx="${n2(tx+k*x)}" cy="${n2(ty+k*y)}" r="${opts.marks==='all'?4:5.5}" fill="${MARK_COLORS[m.g]}" stroke="#fff" stroke-width="1.5"/>`; }).join('');
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">`+tile+
+  // exports carry their slider settings, so a file can be reopened here later
+  const meta=opts.meta?`<metadata id="rc-studio">${JSON.stringify(p).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</metadata>`:'';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">`+meta+tile+
     `<path d="${d}" fill="${p.mark}"/>`+
     (g.guides?`<g transform="translate(${n2(tx)} ${n2(ty)}) scale(${n2(k*1000)/1000}) rotate(${p.tilt})">${g.guides}</g>`:'')+marks+`</svg>`;
 }
@@ -580,8 +583,19 @@ $('#surprise').onclick=()=>{
   sync(); update();
 };
 document.querySelectorAll('[data-bg]').forEach(b=>b.onclick=()=>{ stage.classList.remove('dark','light'); if(b.dataset.bg!=='checker') stage.classList.add(b.dataset.bg); });
-$('#dlsvg').onclick=()=>download('brophy-rc-logo.svg', new Blob([makeSVG(P)],{type:'image/svg+xml'}));
-$('#copysvg').onclick=()=>navigator.clipboard.writeText(makeSVG(P)).then(()=>toast('SVG copied'));
+$('#dlsvg').onclick=()=>download('brophy-rc-logo.svg', new Blob([makeSVG(P,{meta:true})],{type:'image/svg+xml'}));
+function loadSVG(file){
+  file.text().then(t=>{
+    const m=new DOMParser().parseFromString(t,'image/svg+xml').querySelector('metadata#rc-studio');
+    if(!m){ toast('That SVG has no saved settings'); return; }
+    P={...DEF,...JSON.parse(m.textContent)}; sync(); update(); toast('Settings loaded');
+  }).catch(()=>toast('Could not read that file'));
+}
+$('#opensvg').onclick=()=>$('#svgfile').click();
+$('#svgfile').onchange=e=>{ if(e.target.files[0]) loadSVG(e.target.files[0]); e.target.value=''; };
+stage.addEventListener('dragover',e=>e.preventDefault());
+stage.addEventListener('drop',e=>{ e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) loadSVG(f); });
+$('#copysvg').onclick=()=>navigator.clipboard.writeText(makeSVG(P,{meta:true})).then(()=>toast('SVG copied'));
 $('#dlpng').onclick=()=>{
   const img=new Image(), c=document.createElement('canvas'); c.width=c.height=2048;
   img.onload=()=>{ c.getContext('2d').drawImage(img,0,0,2048,2048); c.toBlob(b=>download('brophy-rc-logo.png',b),'image/png'); };
