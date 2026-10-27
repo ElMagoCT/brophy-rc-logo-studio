@@ -206,6 +206,16 @@ const SCHEMA = [
   {k:'tile',l:'Tile color',t:'color',v:'#BE1E2D'},
   {k:'mark',l:'Mark color',t:'color',v:'#FFFFFF'},
  ]],
+ ['Gradients', true, [
+  {k:'tileGrad',l:'Tile fill',t:'select',opts:['solid','linear','radial'],v:'solid'},
+  {k:'tile2',l:'Tile color 2',t:'color',v:'#6E0F18'},
+  {k:'tileAng',l:'Tile angle',min:0,max:360,step:1,v:135,u:'°'},
+  {k:'tileSpread',l:'Tile blend',min:5,max:100,step:1,v:100,u:'%'},
+  {k:'markGrad',l:'Mark fill',t:'select',opts:['solid','linear','radial'],v:'solid'},
+  {k:'mark2',l:'Mark color 2',t:'color',v:'#F6C7CC'},
+  {k:'markAng',l:'Mark angle',min:0,max:360,step:1,v:90,u:'°'},
+  {k:'markSpread',l:'Mark blend',min:5,max:100,step:1,v:100,u:'%'},
+ ]],
 ];
 const DEF = {}; SCHEMA.forEach(([,,items])=>items.forEach(c=>DEF[c.k]=c.v));
 
@@ -216,6 +226,8 @@ const PRESETS = {
   'Chapel': {sH:128,baseW:36,baseH:22,door:true,tiers:3,tierH:7,tierGap:3,taper:14,crossW:38,crossTilt:0,mastW:9,scale:76,ny:14},
   'Off-road stamp': {tileOn:false,palette:'Black mark only',tile:'#161616',mark:'#161616',tStyle:'chunky',tDepth:16,tCount:18,tWidth:62,fTreadTip:3,cIcon:'hub',gap:7},
   'Wheel hub': {cIcon:'hub',ball:44,tCount:32,tDepth:8,tWidth:46,tStyle:'staggered',tTop:140,tBot:100},
+  'Gradient glow': {tileGrad:'radial',tile:'#D8293C',tile2:'#5E0A14',tileAng:225,tileSpread:100,markGrad:'linear',mark:'#FFFFFF',mark2:'#FFD3D8',markAng:90},
+  'Sunset': {tileGrad:'linear',tile:'#F2A33A',tile2:'#B3122A',tileAng:100,markGrad:'solid',mark:'#FFFFFF'},
   'Quiet / minimal': {ant:'steeple',tiers:0,baseH:0,sH:74,crossW:28,treads:true,tDepth:6,tCount:30,tWidth:42,prop:true,cIcon:'dot',ball:26,gap:4},
 };
 
@@ -491,11 +503,26 @@ function makeSVG(p, opts={}){
   const k=Math.min(Z*p.scale/100/(x1-x0), Z*p.scale/100/(y1-y0));
   const tx=Z/2+p.nx-k*(x0+x1)/2, ty=Z/2+p.ny-k*(y0+y1)/2;
   const d=R.map(r=>'M'+r.map(([x,y])=>n2(tx+k*x)+' '+n2(ty+k*y)).join('L')+'Z').join('');
+  // solid colour, or a linear / radial blend between two colours across a box (cx, cy, half-size h)
+  const defs=[];
+  const paint=(type,c1,c2,ang,spread,cx,cy,h,tag)=>{
+    if(type==='solid') return c1;
+    const key=[type,c1,c2,ang,spread,n2(cx),n2(cy),n2(h)].join('|'); let hs=0; for(const ch of key) hs=(hs*31+ch.charCodeAt(0))|0;
+    const id=tag+(hs>>>0).toString(36), a=rad(ang), dx=Math.cos(a)*h, dy=Math.sin(a)*h, o1=50-spread/2, o2=50+spread/2;
+    const stops=`<stop offset="${o1}%" stop-color="${c1}"/><stop offset="${o2}%" stop-color="${c2}"/>`;
+    defs.push(type==='linear'
+      ? `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${n2(cx-dx)}" y1="${n2(cy-dy)}" x2="${n2(cx+dx)}" y2="${n2(cy+dy)}">${stops}</linearGradient>`
+      : `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${n2(cx+dx*.35)}" cy="${n2(cy+dy*.35)}" r="${n2(h*1.35)}">${stops}</radialGradient>`);
+    return `url(#${id})`;
+  };
+  const tileFill=paint(p.tileGrad,p.tile,p.tile2,p.tileAng,p.tileSpread,256,256,256,'tg');
+  const mx0=tx+k*x0, mx1=tx+k*x1, my0=ty+k*y0, my1=ty+k*y1;
+  const markFill=paint(p.markGrad,p.mark,p.mark2,p.markAng,p.markSpread,(mx0+mx1)/2,(my0+my1)/2,Math.max(mx1-mx0,my1-my0)/2,'mg');
   let tile='';
   if(p.tileOn){
-    if(p.shape==='circle') tile=`<circle cx="256" cy="256" r="256" fill="${p.tile}"/>`;
-    else if(p.shape==='squircle'){ const q=[]; for(let i=0;i<96;i++){ const t=i/96*2*Math.PI, c=Math.cos(t), s=Math.sin(t); q.push([256+256*Math.sign(c)*Math.pow(Math.abs(c),2/5), 256+256*Math.sign(s)*Math.pow(Math.abs(s),2/5)]); } tile=`<path d="${smooth(q)}" fill="${p.tile}"/>`; }
-    else tile=`<rect width="512" height="512" rx="${n2(Z*p.tileR/100)}" fill="${p.tile}"/>`;
+    if(p.shape==='circle') tile=`<circle cx="256" cy="256" r="256" fill="${tileFill}"/>`;
+    else if(p.shape==='squircle'){ const q=[]; for(let i=0;i<96;i++){ const t=i/96*2*Math.PI, c=Math.cos(t), s=Math.sin(t); q.push([256+256*Math.sign(c)*Math.pow(Math.abs(c),2/5), 256+256*Math.sign(s)*Math.pow(Math.abs(s),2/5)]); } tile=`<path d="${smooth(q)}" fill="${tileFill}"/>`; }
+    else tile=`<rect width="512" height="512" rx="${n2(Z*p.tileR/100)}" fill="${tileFill}"/>`;
   }
   let marks='';
   if(opts.marks){
@@ -504,8 +531,8 @@ function makeSVG(p, opts={}){
   }
   // exports carry their slider settings, so a file can be reopened here later
   const meta=opts.meta?`<metadata id="rc-studio">${JSON.stringify(p).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</metadata>`:'';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">`+meta+tile+
-    `<path d="${d}" fill="${p.mark}"/>`+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">`+meta+(defs.length?`<defs>${defs.join('')}</defs>`:'')+tile+
+    `<path d="${d}" fill="${markFill}"/>`+
     (g.guides?`<g transform="translate(${n2(tx)} ${n2(ty)}) scale(${n2(k*1000)/1000}) rotate(${p.tilt})">${g.guides}</g>`:'')+marks+`</svg>`;
 }
 
@@ -553,6 +580,7 @@ function sync(){
   dim(['holeR'],!P.matchHoles); dim(['hCorner','hSide'],!P.hBox); dim(['cW'],P.matchHoles);
   dim(['baseW','baseH','flare','door','tiers','tierH','tierGap','taper','tierSlant','mastGap','crossW','crossY','crossTilt'],P.ant!=='steeple');
   dim(['stAng','stLen','stW'],P.cIcon!=='stick'); dim(['ball'],P.cIcon==='none');
+  dim(['tile2','tileAng','tileSpread'],P.tileGrad==='solid'||!P.tileOn); dim(['tileGrad'],!P.tileOn); dim(['mark2','markAng','markSpread'],P.markGrad==='solid');
   dim(['shape','tileR'],!P.tileOn); if(P.shape!=='rounded') dim(['tileR'],true);
   dim(['gapUp'],!P.gap);
 }
