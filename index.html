@@ -119,6 +119,7 @@ const SCHEMA = [
  ['Holes (R counter & C counter)', true, [
   {k:'hX',l:'R hole left/right',min:-25,max:25,step:.5,v:-0.5},
   {k:'hY',l:'R hole up/down',min:-25,max:25,step:.5,v:0},
+  {k:'hSize',l:'R hole size',min:50,max:150,step:1,v:100,u:'%'},
   {k:'matchHoles',l:'Match R and C hole sizes',t:'bool',v:false},
   {k:'holeR',l:'Matched hole size',min:20,max:60,step:.5,v:40},
   {k:'hBox',l:'R hole squared side',min:0,max:150,step:1,v:123,u:'%'},
@@ -215,6 +216,8 @@ const SCHEMA = [
  ]],
  ['Trigger (under the R)', true, [
   {k:'trigger',l:'Show trigger',t:'bool',v:false},
+  {k:'trStyle',l:'Style',t:'select',opts:['finger','hook'],v:'finger'},
+  {k:'trSweep',l:'Hook curl',min:-180,max:180,step:1,v:-50,u:'°'},
   {k:'trX',l:'Position',min:0,max:100,step:1,v:58,u:'%'},
   {k:'trLen',l:'Length',min:20,max:110,step:1,v:72,u:'%'},
   {k:'trW',l:'Width',min:3,max:24,step:.5,v:11},
@@ -225,6 +228,11 @@ const SCHEMA = [
   {k:'trGuard',l:'Trigger guard',t:'bool',v:false},
   {k:'trGuardY',l:'Guard height',min:20,max:100,step:1,v:85,u:'%'},
   {k:'trGuardW',l:'Guard thickness',min:2,max:16,step:.5,v:6},
+  {k:'gdY',l:'Guard start height (hook)',min:0,max:90,step:1,v:50,u:'%'},
+  {k:'gdAng',l:'Guard angle (hook)',min:-60,max:90,step:1,v:25,u:'°'},
+  {k:'gdLen',l:'Guard length (hook)',min:30,max:180,step:1,v:65,u:'%'},
+  {k:'gdSweep',l:'Guard curl (hook)',min:-60,max:240,step:1,v:110,u:'°'},
+  {k:'gdTaper',l:'Guard taper (hook)',min:0,max:100,step:1,v:60,u:'%'},
  ]],
  ['Inside the C & joysticks', false, [
   {k:'cIcon',l:'C icon',t:'select',opts:['stick','gimbal','thumbstick','arcade','hub','dot','none'],v:'stick'},
@@ -264,6 +272,7 @@ const PRESETS = {
   'Off-road stamp': {tileOn:false,palette:'Black mark only',tile:'#161616',mark:'#161616',tStyle:'chunky',tDepth:16,tCount:18,tWidth:62,fTreadTip:3,cIcon:'hub',gap:7},
   'Wheel hub': {cIcon:'hub',ball:44,tCount:32,tDepth:8,tWidth:46,tStyle:'staggered',tTop:140,tBot:100},
   'Wheel & trigger': {rIcon:'wheel',trigger:true,lugs:true,lugStyle:'hex',fTrigger:3},
+  'Pistol trigger': {trigger:true,trStyle:'hook',trGuard:true,trX:35,trLen:70,trW:10,trTaper:70,trGuardW:4.5,fTrigger:2},
   'Wheel fused into R': {rIcon:'wheel',wSize:108,wTire:22,wSpokes:6,wHub:44,trigger:true,trGuard:true,fTrigger:2},
   'Gradient glow': {tileGrad:'radial',tile:'#D8293C',tile2:'#5E0A14',tileAng:225,tileSpread:100,markGrad:'linear',mark:'#FFFFFF',mark2:'#FFD3D8',markAng:90},
   'Sunset': {tileGrad:'linear',tile:'#F2A33A',tile2:'#B3122A',tileAng:100,markGrad:'solid',mark:'#FFFFFF'},
@@ -300,6 +309,21 @@ function rectPts(x,y,w,h,r=0){
 }
 // rotate by a degrees about (ox,oy), then move by (tx,ty)
 const place=(pts,a=0,tx=0,ty=0,ox=0,oy=0)=>pts.map(([x,y])=>{ const [u,v]=rot(x-ox,y-oy,a); return [u+ox+tx,v+oy+ty]; });
+// tapered curved stroke: starts at (x,y) heading `head`°, turns `sweep`° evenly over `len`;
+// `back` buries a straight stub behind the start, taper 1 ends in a point
+function crescent(x,y,head,len,sweep,w,taper,back=0){
+  const k=rad(sweep)/len, h0=rad(head), hw=s=>w/2*Math.max(0,1-taper*Math.max(0,s)/len);
+  const at=s=>{ if(s<=0||Math.abs(k)<1e-6) return [x+Math.cos(h0)*s,y+Math.sin(h0)*s,h0];
+    return [x+(Math.sin(h0+k*s)-Math.sin(h0))/k, y-(Math.cos(h0+k*s)-Math.cos(h0))/k, h0+k*s]; };
+  const L=[], R=[], n=Math.max(12,Math.ceil(Math.abs(sweep)/6));
+  for(let i=0;i<=n;i++){ const s=-back+(len+back)*i/n, [px,py,h]=at(s), r=hw(s);
+    L.push([px+Math.cos(h+Math.PI/2)*r,py+Math.sin(h+Math.PI/2)*r]); R.push([px-Math.cos(h+Math.PI/2)*r,py-Math.sin(h+Math.PI/2)*r]); }
+  const [ex,ey,eh]=at(len), er=hw(len), out=[...L];
+  if(er>.3) out.push(...arcPts(ex,ey,er,eh*180/Math.PI+90,eh*180/Math.PI-90)); else out.push([ex+Math.cos(eh)*.01,ey+Math.sin(eh)*.01]);
+  out.push(...R.reverse());
+  if(!back) out.push(...arcPts(x,y,hw(0),head-90,head-270));
+  return out;
+}
 function capsule(x1,y1,x2,y2,w){ const t=Math.atan2(y2-y1,x2-x1)*180/Math.PI; return [...arcPts(x2,y2,w/2,t-90,t+90),...arcPts(x1,y1,w/2,t+90,t+270)]; }
 function band(x1,y1,x2,y2,w){ const L=Math.hypot(x2-x1,y2-y1)||1, nx=-(y2-y1)/L*w/2, ny=(x2-x1)/L*w/2; return [[x1+nx,y1+ny],[x2+nx,y2+ny],[x2-nx,y2-ny],[x1-nx,y1-ny]]; }
 function smoothPts(pts,steps=5){ // closed Catmull-Rom through pts, sampled
@@ -418,7 +442,7 @@ function build(p, opts={}){
   const bowlH=H*p.bowl/100, Rb=bowlH/2, bs=Math.min(S*p.bowlW/100, Rb-8), rc=Rb-bs;
   const bcx=S+rc+bs*.2, bcy=-H+Rb, y0=-H+bowlH;
   // the R hole (and prop) can slide and resize inside the bowl without moving the letter
-  const hx=bcx+p.hX, hy=bcy+p.hY, rH=p.matchHoles?Math.min(p.holeR,Rb-6):rc;
+  const hx=bcx+p.hX, hy=bcy+p.hY, rH=p.matchHoles?Math.min(p.holeR,Rb-6):Math.min(rc*p.hSize/100,Rb-4);
   const cr=Math.min(p.corner,S/2,Rb);
   const tA=Math.tan(rad(p.legAng)), Lw=S*p.legW/100;
   const lx0=Math.max(S*.35, bcx-rc*.5+p.legX), e=bs*.9;
@@ -434,6 +458,12 @@ function build(p, opts={}){
   let trBox=null;
   if(p.trigger){
     const legL=y=>lx0+tA*(y-y0), w0=Math.max(4,lx0-S), ax=S+w0*p.trX/100, L=-y0*p.trLen/100, top=y0+p.trGap;
+    const all=[];
+    if(p.trStyle==='hook'){ // pistol-grip transmitter: a trigger that curls forward, plus a curved guard in front of it
+      const tr=crescent(ax,top,90+p.trAng,L,p.trSweep,p.trW,p.trTaper/100,p.trGap>0?0:bs*.6);
+      W.push(tr); all.push(...tr);
+      if(p.trGuard){ const gy=y0+(-y0)*p.gdY/100, g=crescent(legL(gy)+1,gy,90+p.gdAng,-y0*p.gdLen/100,p.gdSweep,p.trGuardW,p.gdTaper/100,6); W.push(g); all.push(...g); } // grows out of the leg's inner edge
+    } else {
     const t0=p.trGap>0?0:-bs*.6/L, cv=p.trCurve/100;
     const c=t=>{ const [u,v]=rot(-cv*L*t*t*Math.sign(t||1),L*t,p.trAng); return [ax+u,top+v]; };
     const hw=t=>p.trW/2*(1-p.trTaper/100*Math.max(0,t));
@@ -442,9 +472,9 @@ function build(p, opts={}){
     for(let i=0;i<=16;i++){ const t=t0+(1-t0)*i/16, q=c(t), n=rad(ang(t)+90); Lp.push([q[0]+Math.cos(n)*hw(t),q[1]+Math.sin(n)*hw(t)]); Rp.push([q[0]-Math.cos(n)*hw(t),q[1]-Math.sin(n)*hw(t)]); }
     const tip=c(1), a1t=ang(1), shape=[...Lp,...arcPts(tip[0],tip[1],hw(1),a1t+90,a1t-90),...Rp.reverse()];
     if(p.trGap>0){ const q=c(0), a0=ang(0); shape.push(...arcPts(q[0],q[1],hw(0),a0-90,a0-270)); }
-    W.push(shape);
-    const all=[...shape]; let gy=null;
-    if(p.trGuard){ gy=y0+(-y0)*p.trGuardY/100; const g=band(S-4,gy,legL(gy)+4,gy,p.trGuardW); W.push(g); all.push(...g); }
+    W.push(shape); all.push(...shape);
+    if(p.trGuard){ const gy=y0+(-y0)*p.trGuardY/100, g=band(S-4,gy,legL(gy)+4,gy,p.trGuardW); W.push(g); all.push(...g); }
+    }
     trBox=all.reduce((b,[x,y])=>[Math.min(b[0],x),Math.min(b[1],y),Math.max(b[2],x),Math.max(b[3],y)],[1e9,1e9,-1e9,-1e9]);
   }
   let holePoly;
@@ -685,7 +715,9 @@ function sync(){
   dim(['fSteeple','fSteepleRoot'],P.ant==='none'); dim(['fValley'],P.ant!=='none'); dim(['fInner'],P.rIcon==='none'&&P.cIcon==='none');
   dim(['blades','pSize','pWidth','pSweep','pRot','hub'],P.rIcon!=='prop');
   dim(['wSize','wTire','wSpokes','wSpokeW','wHub','wHubHole','wKnobN','wKnobD','wBridges','wBridgeW','wRot'],P.rIcon!=='wheel');
-  dim(['trX','trLen','trW','trTaper','trCurve','trAng','trGap','trGuard','fTrigger'],!P.trigger); dim(['trGuardY','trGuardW'],!P.trigger||!P.trGuard);
+  const hook=P.trStyle==='hook';
+  dim(['trStyle','trX','trLen','trW','trTaper','trAng','trGap','trGuard','fTrigger'],!P.trigger); dim(['trCurve'],!P.trigger||hook); dim(['trSweep'],!P.trigger||!hook);
+  dim(['trGuardW'],!P.trigger||!P.trGuard); dim(['trGuardY'],!P.trigger||!P.trGuard||hook); dim(['gdY','gdAng','gdLen','gdSweep','gdTaper'],!P.trigger||!P.trGuard||!hook); dim(['hSize'],P.matchHoles);
   dim(['lugStyle','lugN','lugSize','lugPos','lugSpan','lugRot','fLugs'],!P.lugs);
   dim(['upright','lean','sX','sH','baseW','baseH','door','tiers','tierH','tierGap','taper','tierSlant','mastW','mastGap','crossW','crossY','crossTilt','crossR','round'],P.ant==='none');
   dim(['holeR'],!P.matchHoles); dim(['hCorner','hSide'],!P.hBox); dim(['cW'],P.matchHoles);
