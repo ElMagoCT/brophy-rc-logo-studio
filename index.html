@@ -140,6 +140,15 @@ const SCHEMA = [
   {k:'tBot',l:'Reach under',min:0,max:200,step:1,v:103,u:'°'},
   {k:'tInset',l:'Start from tip',min:0,max:20,step:.5,v:2,u:'°'},
  ]],
+ ['C lug nuts', true, [
+  {k:'lugs',l:'Show lug nuts',t:'bool',v:false},
+  {k:'lugStyle',l:'Style',t:'select',opts:['round','hex','ring'],v:'round'},
+  {k:'lugN',l:'Count',min:1,max:12,step:1,v:5},
+  {k:'lugSize',l:'Size',min:1.5,max:12,step:.5,v:4.5},
+  {k:'lugPos',l:'In / out on the ring',min:10,max:90,step:1,v:50,u:'%'},
+  {k:'lugSpan',l:'Spread around C',min:10,max:100,step:1,v:70,u:'%'},
+  {k:'lugRot',l:'Slide around C',min:-180,max:180,step:1,v:0,u:'°'},
+ ]],
  ['Antenna (chapel steeple)', true, [
   {k:'ant',l:'Style',t:'select',opts:['steeple','mast','none'],v:'steeple'},
   {k:'upright',l:'Stand upright (ignore tilt)',t:'bool',v:true},
@@ -178,25 +187,53 @@ const SCHEMA = [
   {k:'fTreadRoot',l:'Tread roots',min:0,max:30,step:.5,v:0,fx:true},
   {k:'fSteeple',l:'Steeple corners',min:0,max:30,step:.5,v:5.5,fx:true},
   {k:'fSteepleRoot',l:'Steeple inside corners',min:0,max:30,step:.5,v:0,fx:true},
-  {k:'fInner',l:'Prop & stick',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fInner',l:'Prop, wheel & stick',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fTrigger',l:'Trigger & guard',min:0,max:30,step:.5,v:0,fx:true},
+  {k:'fLugs',l:'Lug nuts',min:0,max:30,step:.5,v:0,fx:true},
   {k:'fOtherOut',l:'Any other outside',min:0,max:30,step:.5,v:0,fx:true},
   {k:'fOtherIn',l:'Any other inside',min:0,max:30,step:.5,v:0,fx:true},
  ]],
- ['Prop (inside R)', false, [
-  {k:'prop',l:'Show prop',t:'bool',v:true},
+ ['Inside the R (prop or wheel)', true, [
+  {k:'rIcon',l:'Icon',t:'select',opts:['prop','wheel','stick','gimbal','thumbstick','arcade','none'],v:'prop'},
   {k:'blades',l:'Blades',min:2,max:5,step:1,v:3},
   {k:'pSize',l:'Size',min:50,max:100,step:1,v:86,u:'%'},
   {k:'pWidth',l:'Blade width',min:20,max:80,step:1,v:40,u:'%'},
   {k:'pSweep',l:'Sweep',min:-70,max:70,step:1,v:26,u:'°'},
   {k:'pRot',l:'Spin',min:0,max:360,step:1,v:12,u:'°'},
   {k:'hub',l:'Hub',min:0,max:40,step:1,v:25,u:'%'},
+  {k:'wSize',l:'Wheel size (100%+ fuses into R)',min:50,max:120,step:1,v:88,u:'%'},
+  {k:'wTire',l:'Tire thickness',min:10,max:60,step:1,v:30,u:'%'},
+  {k:'wSpokes',l:'Spokes',min:0,max:10,step:1,v:5},
+  {k:'wSpokeW',l:'Spoke width',min:2,max:16,step:.5,v:5},
+  {k:'wHub',l:'Hub size',min:0,max:80,step:1,v:38,u:'%'},
+  {k:'wHubHole',l:'Hub hole',min:0,max:80,step:1,v:40,u:'%'},
+  {k:'wKnobN',l:'Tire knobs',min:0,max:30,step:1,v:0},
+  {k:'wKnobD',l:'Knob size',min:1,max:10,step:.5,v:3},
+  {k:'wBridges',l:'Bridges to the R',min:0,max:8,step:1,v:0},
+  {k:'wBridgeW',l:'Bridge width',min:2,max:20,step:.5,v:6},
+  {k:'wRot',l:'Wheel spin',min:0,max:360,step:1,v:0,u:'°'},
  ]],
- ['Inside the C', false, [
-  {k:'cIcon',l:'Icon',t:'select',opts:['stick','hub','dot','none'],v:'stick'},
+ ['Trigger (under the R)', true, [
+  {k:'trigger',l:'Show trigger',t:'bool',v:false},
+  {k:'trX',l:'Position',min:0,max:100,step:1,v:58,u:'%'},
+  {k:'trLen',l:'Length',min:20,max:110,step:1,v:72,u:'%'},
+  {k:'trW',l:'Width',min:3,max:24,step:.5,v:11},
+  {k:'trTaper',l:'Taper',min:0,max:80,step:1,v:30,u:'%'},
+  {k:'trCurve',l:'Hook',min:-80,max:80,step:1,v:18,u:'%'},
+  {k:'trAng',l:'Lean',min:-40,max:40,step:1,v:0,u:'°'},
+  {k:'trGap',l:'Gap from R (0 = attached)',min:0,max:15,step:.5,v:0},
+  {k:'trGuard',l:'Trigger guard',t:'bool',v:false},
+  {k:'trGuardY',l:'Guard height',min:20,max:100,step:1,v:85,u:'%'},
+  {k:'trGuardW',l:'Guard thickness',min:2,max:16,step:.5,v:6},
+ ]],
+ ['Inside the C & joysticks', false, [
+  {k:'cIcon',l:'C icon',t:'select',opts:['stick','gimbal','thumbstick','arcade','hub','dot','none'],v:'stick'},
   {k:'stAng',l:'Stick angle',min:-180,max:180,step:1,v:-60,u:'°'},
   {k:'stLen',l:'Stick length',min:15,max:80,step:1,v:64,u:'%'},
   {k:'ball',l:'Ball / hub size',min:8,max:60,step:1,v:22,u:'%'},
   {k:'stW',l:'Stick width',min:5,max:25,step:1,v:15,u:'%'},
+  {k:'jBase',l:'Joystick base size',min:30,max:100,step:1,v:70,u:'%'},
+  {k:'rjAng',l:'R joystick angle',min:-180,max:180,step:1,v:-60,u:'°'},
  ]],
  ['Tile & color', true, [
   {k:'palette',l:'Palette',t:'select',opts:Object.keys(PALETTES),v:'Brophy red'},
@@ -226,6 +263,8 @@ const PRESETS = {
   'Chapel': {sH:128,baseW:36,baseH:22,door:true,tiers:3,tierH:7,tierGap:3,taper:14,crossW:38,crossTilt:0,mastW:9,scale:76,ny:14},
   'Off-road stamp': {tileOn:false,palette:'Black mark only',tile:'#161616',mark:'#161616',tStyle:'chunky',tDepth:16,tCount:18,tWidth:62,fTreadTip:3,cIcon:'hub',gap:7},
   'Wheel hub': {cIcon:'hub',ball:44,tCount:32,tDepth:8,tWidth:46,tStyle:'staggered',tTop:140,tBot:100},
+  'Wheel & trigger': {rIcon:'wheel',trigger:true,lugs:true,lugStyle:'hex',fTrigger:3},
+  'Wheel fused into R': {rIcon:'wheel',wSize:108,wTire:22,wSpokes:6,wHub:44,trigger:true,trGuard:true,fTrigger:2},
   'Gradient glow': {tileGrad:'radial',tile:'#D8293C',tile2:'#5E0A14',tileAng:225,tileSpread:100,markGrad:'linear',mark:'#FFFFFF',mark2:'#FFD3D8',markAng:90},
   'Sunset': {tileGrad:'linear',tile:'#F2A33A',tile2:'#B3122A',tileAng:100,markGrad:'solid',mark:'#FFFFFF'},
   'Quiet / minimal': {ant:'steeple',tiers:0,baseH:0,sH:74,crossW:28,treads:true,tDepth:6,tCount:30,tWidth:42,prop:true,cIcon:'dot',ball:26,gap:4},
@@ -355,6 +394,24 @@ function blade(len, root, width, sweepDeg){
   return smoothPts(L.concat(R.slice(0,-1).reverse()).filter((p,i,a)=>i===0||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>.4));
 }
 
+// joystick icons sized to a counter of radius Rc, stick pointing at ang; returns Clipper paths
+function joystick(type,cx,cy,Rc,ang,p){
+  const L=Rc*p.stLen/100, br=Rc*p.ball/100, w=Rc*p.stW/100, B=Rc*p.jBase/100, c=Math.cos(rad(ang)), s=Math.sin(rad(ang));
+  const ring=(x,y,r,t)=>clip(CL.ClipType.ctDifference,[toC(circ(x,y,r))],[toC(circ(x,y,Math.max(.5,r-t)))]);
+  const U=a=>clip(CL.ClipType.ctUnion,a);
+  if(type==='stick') return U([toC(capsule(cx-L*.18*c,cy-L*.18*s,cx+L*c,cy+L*s,w)),toC(circ(cx+L*c,cy+L*s,br))]);
+  if(type==='gimbal') // transmitter gimbal from above: travel ring, pivot, stick, ball
+    return U([...ring(cx,cy,B,w*.75),toC(circ(cx,cy,w*.95)),toC(capsule(cx,cy,cx+L*c,cy+L*s,w)),toC(circ(cx+L*c,cy+L*s,br))]);
+  if(type==='thumbstick'){ // game-controller stick from above: base ring and a tilted, grooved cap
+    const px=cx+L*.3*c, py=cy+L*.3*s, cr=Math.max(br*1.7,B*.45);
+    const cap=clip(CL.ClipType.ctDifference,[toC(circ(px,py,cr))],ring(px,py,cr*.72,cr*.16));
+    return U([...ring(cx,cy,B,w*.7),...cap]);
+  }
+  // arcade stick seen from the side: base plate, dome, shaft, ball top
+  const bx=cx-L*.45*c, by=cy-L*.45*s, tx=cx+L*.55*c, ty=cy+L*.55*s;
+  return U([toC(place(rectPts(-B*.65,-w*.65,B*1.3,w*1.3,w*.5),ang+90,bx,by)),toC(circ(bx,by,w*1.2)),toC(capsule(bx,by,tx,ty,w*.8)),toC(circ(tx,ty,br*1.15))]);
+}
+
 // ---------- the mark ----------
 function build(p, opts={}){
   const S=p.S, H=p.H;
@@ -373,14 +430,33 @@ function build(p, opts={}){
   const q=[]; for(let i=0;i<=8;i++){ const t=i/8,u=1-t; q.push([2*u*t*0+t*t*cr, u*u*(-H+cr)+2*u*t*(-H)+t*t*(-H)]); }
   W.push([[0,0],...q,...arcPts(bcx,bcy,Rb,-90,90),[S,y0],[S,0]]);
   W.push(leg);
+  // trigger hanging from the bowl into the gap between stem and leg (pistol-grip transmitter)
+  let trBox=null;
+  if(p.trigger){
+    const legL=y=>lx0+tA*(y-y0), w0=Math.max(4,lx0-S), ax=S+w0*p.trX/100, L=-y0*p.trLen/100, top=y0+p.trGap;
+    const t0=p.trGap>0?0:-bs*.6/L, cv=p.trCurve/100;
+    const c=t=>{ const [u,v]=rot(-cv*L*t*t*Math.sign(t||1),L*t,p.trAng); return [ax+u,top+v]; };
+    const hw=t=>p.trW/2*(1-p.trTaper/100*Math.max(0,t));
+    const ang=t=>{ const a=c(t-.01), b=c(t+.01); return Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI; };
+    const Lp=[], Rp=[];
+    for(let i=0;i<=16;i++){ const t=t0+(1-t0)*i/16, q=c(t), n=rad(ang(t)+90); Lp.push([q[0]+Math.cos(n)*hw(t),q[1]+Math.sin(n)*hw(t)]); Rp.push([q[0]-Math.cos(n)*hw(t),q[1]-Math.sin(n)*hw(t)]); }
+    const tip=c(1), a1t=ang(1), shape=[...Lp,...arcPts(tip[0],tip[1],hw(1),a1t+90,a1t-90),...Rp.reverse()];
+    if(p.trGap>0){ const q=c(0), a0=ang(0); shape.push(...arcPts(q[0],q[1],hw(0),a0-90,a0-270)); }
+    W.push(shape);
+    const all=[...shape]; let gy=null;
+    if(p.trGuard){ gy=y0+(-y0)*p.trGuardY/100; const g=band(S-4,gy,legL(gy)+4,gy,p.trGuardW); W.push(g); all.push(...g); }
+    trBox=all.reduce((b,[x,y])=>[Math.min(b[0],x),Math.min(b[1],y),Math.max(b[2],x),Math.max(b[3],y)],[1e9,1e9,-1e9,-1e9]);
+  }
+  let holePoly;
   // R hole: a circle, or a "D" with one side pushed out square (hBox) and filleted (hCorner)
   if(p.hBox>0){
     const Lb=rH*p.hBox/100, cf=Math.min(rH,Lb)*p.hCorner/100;
     const D=[...arcPts(0,0,rH,-90,90)];
     if(cf>.05) D.push(...arcPts(-Lb+cf,rH-cf,cf,90,180),...arcPts(-Lb+cf,-rH+cf,cf,180,270));
     else D.push([-Lb,rH],[-Lb,-rH]);
-    K.push(place(D,p.hSide-180,hx,hy));
-  } else K.push(circ(hx,hy,rH));
+    holePoly=place(D,p.hSide-180,hx,hy);
+  } else holePoly=circ(hx,hy,rH);
+  K.push(holePoly);
   // C: disc minus counter minus opening wedge
   W.push(circ(ccx,ccy,Ro));
   K.push(circ(ccx,ccy,Ri));
@@ -413,6 +489,17 @@ function build(p, opts={}){
       }
     });
   }
+  // lug nuts set into the C ring
+  const lugAt=[];
+  if(p.lugs){
+    const rr=Ri+(Ro-Ri)*p.lugPos/100, span=(360-2*p.open)*p.lugSpan/100, mid=od+180+p.lugRot, r=p.lugSize;
+    for(let i=0;i<p.lugN;i++){
+      const a=mid-span/2+span*(i+.5)/p.lugN, x=ccx+rr*Math.cos(rad(a)), y=ccy+rr*Math.sin(rad(a));
+      lugAt.push([x,y]);
+      K.push(p.lugStyle==='hex'?place(Array.from({length:6},(_,j)=>[r*Math.cos(rad(60*j)),r*Math.sin(rad(60*j))]),a,x,y):circ(x,y,r));
+      if(p.lugStyle==='ring') TOP.push(circ(x,y,r*.45));
+    }
+  }
   // antenna, rooted in the valley between the R bowl and the C
   const hit=circleHits(bcx,bcy,Rb,ccx,ccy,Ro);
   const hp=hit?(hit[0][1]<hit[1][1]?hit[0]:hit[1]):[(bcx+ccx)/2,-H];
@@ -444,14 +531,33 @@ function build(p, opts={}){
     G.forEach(g=>W.push(place(g,ar,nx,ny))); GK.forEach(g=>K.push(place(g,ar,nx,ny)));
     st={nx,ny,ar,half,top,depth};
   }
-  // prop in the R counter
-  if(p.prop){
+  // prop or wheel in the R counter
+  const rIcon=p.prop===false?'none':p.rIcon;
+  if(rIcon==='wheel'){
+    const Rw=rH*p.wSize/100, Rin=Rw*(1-p.wTire/100), hubR=Rin*p.wHub/100, parts=[];
+    for(let i=0;i<p.wSpokes;i++){ const a=rad(p.wRot+i*360/p.wSpokes); parts.push(band(hx,hy,hx+(Rin+2)*Math.cos(a),hy+(Rin+2)*Math.sin(a),p.wSpokeW)); }
+    if(hubR>0) parts.push(circ(hx,hy,hubR));
+    if(p.wKnobN>0){ const pitch=360/p.wKnobN, w=rad(pitch)*Rw*.5;
+      for(let i=0;i<p.wKnobN;i++){ const a=p.wRot+pitch*(i+.5), rr=Rw+p.wKnobD/2-1; parts.push(place(rectPts(-w/2,-(p.wKnobD+2)/2,w,p.wKnobD+2,Math.min(w,p.wKnobD)/4),a+90,hx+rr*Math.cos(rad(a)),hy+rr*Math.sin(rad(a)))); } }
+    let wheel=clip(CL.ClipType.ctDifference,[toC(circ(hx,hy,Rw))],[toC(circ(hx,hy,Rin))]);
+    wheel=clip(CL.ClipType.ctUnion,[...wheel,...parts.map(toC)]);
+    if(p.wBridges>0){ // tabs that tie the wheel into the R around it
+      const br=[]; for(let i=0;i<p.wBridges;i++){ const a=rad(p.wRot+180/Math.max(1,p.wSpokes)+i*360/p.wBridges); br.push(toC(band(hx+(Rw-2)*Math.cos(a),hy+(Rw-2)*Math.sin(a),hx+rH*3*Math.cos(a),hy+rH*3*Math.sin(a),p.wBridgeW))); }
+      const grown=toC(place(holePoly,0,0,0).map(([x,y])=>[hx+(x-hx)*(rH+3)/rH,hy+(y-hy)*(rH+3)/rH]));
+      wheel=clip(CL.ClipType.ctUnion,[...wheel,...clip(CL.ClipType.ctIntersection,br,[grown])]);
+    }
+    if(hubR>0 && p.wHubHole>0) wheel=clip(CL.ClipType.ctDifference,wheel,[toC(circ(hx,hy,hubR*p.wHubHole/100))]);
+    TOPdone.push(...wheel);
+  }
+  if(['stick','gimbal','thumbstick','arcade'].includes(rIcon)) TOPdone.push(...joystick(rIcon,hx,hy,rH,p.rjAng,p));
+  if(rIcon==='prop'){
     const len=rH*p.pSize/100, hub=rH*p.hub/100, bl=blade(len, Math.max(2,hub*.55), rH*p.pWidth/100, p.pSweep);
     for(let i=0;i<p.blades;i++) TOP.push(place(bl,p.pRot+i*360/p.blades,hx,hy));
     if(hub>0) TOP.push(circ(hx,hy,hub));
   }
   // inside the C
-  if(p.cIcon==='stick'){
+  if(['gimbal','thumbstick','arcade'].includes(p.cIcon)) TOPdone.push(...joystick(p.cIcon,ccx,ccy,Ri,p.stAng,p));
+  else if(p.cIcon==='stick'){
     const L=Ri*p.stLen/100, c=Math.cos(rad(p.stAng)), s=Math.sin(rad(p.stAng));
     TOP.push(capsule(ccx-L*.18*c,ccy-L*.18*s,ccx+L*c,ccy+L*s,Ri*p.stW/100), circ(ccx+L*c,ccy+L*s,Ri*p.ball/100));
   } else if(p.cIcon==='hub'){
@@ -471,7 +577,9 @@ function build(p, opts={}){
   const radiusOf=([x,y],cv)=>{
     const g=(()=>{
       if(st){ const [lx,ly]=rot(x-st.nx,y-st.ny,-st.ar); if(Math.abs(lx)<st.half+3 && ly<st.depth && ly>st.top-14) return cv?'fSteeple':'fSteepleRoot'; }
-      if(Math.hypot(x-hx,y-hy)<rH-.3 || Math.hypot(x-ccx,y-ccy)<Ri-.3) return 'fInner';
+      if(lugAt.some(([lx,ly])=>Math.hypot(x-lx,y-ly)<p.lugSize+1.5)) return 'fLugs';
+      if(trBox && y>y0+.5 && x>trBox[0]-1.5 && x<trBox[2]+1.5 && y>trBox[1]-1.5 && y<trBox[3]+1.5) return 'fTrigger';
+      if(Math.hypot(x-hx,y-hy)<rH+(rIcon==='wheel'?2:-.3) || Math.hypot(x-ccx,y-ccy)<Ri-.3) return 'fInner';
       if(cv && Math.abs(y)<2.5 && x<ccx-Ri*.3) return 'fFeet';
       if(!cv && Math.abs(y-y0)<6 && x>S-6 && x<lx0+6) return 'fCrotch';
       if(y>gTop[1]-8 && y<12 && legDist(x,y)<p.gap/2+8) return 'fJoin';
@@ -542,7 +650,7 @@ const inputs={};
 let hoverG=null;
 function buildUI(){
   SCHEMA.forEach(([title,open,items])=>{
-    const d=document.createElement('details'); if(open) d.open=true;
+    const d=document.createElement('details'); // every menu starts collapsed
     d.innerHTML=`<summary>${title}</summary>`;
     items.forEach(c=>{
       const row=document.createElement('div'); row.className='row'; row.dataset.k=c.k;
@@ -574,12 +682,16 @@ function sync(){
   // dim controls that do nothing in the current state
   const dim=(keys,off)=>keys.forEach(k=>inputs[k].row.classList.toggle('off',off));
   dim(['tStyle','tCount','tDepth','tWidth','tTop','tBot','tInset','fTreadTip','fTreadRoot'],!P.treads);
-  dim(['fSteeple','fSteepleRoot'],P.ant==='none'); dim(['fValley'],P.ant!=='none'); dim(['fInner'],!P.prop&&P.cIcon==='none');
-  dim(['blades','pSize','pWidth','pSweep','pRot','hub'],!P.prop);
+  dim(['fSteeple','fSteepleRoot'],P.ant==='none'); dim(['fValley'],P.ant!=='none'); dim(['fInner'],P.rIcon==='none'&&P.cIcon==='none');
+  dim(['blades','pSize','pWidth','pSweep','pRot','hub'],P.rIcon!=='prop');
+  dim(['wSize','wTire','wSpokes','wSpokeW','wHub','wHubHole','wKnobN','wKnobD','wBridges','wBridgeW','wRot'],P.rIcon!=='wheel');
+  dim(['trX','trLen','trW','trTaper','trCurve','trAng','trGap','trGuard','fTrigger'],!P.trigger); dim(['trGuardY','trGuardW'],!P.trigger||!P.trGuard);
+  dim(['lugStyle','lugN','lugSize','lugPos','lugSpan','lugRot','fLugs'],!P.lugs);
   dim(['upright','lean','sX','sH','baseW','baseH','door','tiers','tierH','tierGap','taper','tierSlant','mastW','mastGap','crossW','crossY','crossTilt','crossR','round'],P.ant==='none');
   dim(['holeR'],!P.matchHoles); dim(['hCorner','hSide'],!P.hBox); dim(['cW'],P.matchHoles);
   dim(['baseW','baseH','flare','door','tiers','tierH','tierGap','taper','tierSlant','mastGap','crossW','crossY','crossTilt'],P.ant!=='steeple');
-  dim(['stAng','stLen','stW'],P.cIcon!=='stick'); dim(['ball'],P.cIcon==='none');
+  const J=['stick','gimbal','thumbstick','arcade'], jC=J.includes(P.cIcon), jR=J.includes(P.rIcon);
+  dim(['stAng'],!jC); dim(['rjAng'],!jR); dim(['stLen','stW','jBase'],!jC&&!jR); dim(['ball'],P.cIcon==='none'&&!jR);
   dim(['tile2','tileAng','tileSpread'],P.tileGrad==='solid'||!P.tileOn); dim(['tileGrad'],!P.tileOn); dim(['mark2','markAng','markSpread'],P.markGrad==='solid');
   dim(['shape','tileR'],!P.tileOn); if(P.shape!=='rounded') dim(['tileR'],true);
   dim(['gapUp'],!P.gap);
