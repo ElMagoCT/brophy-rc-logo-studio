@@ -244,8 +244,12 @@ const SCHEMA = [
   {k:'rjAng',l:'R joystick angle',min:-180,max:180,step:1,v:-60,u:'°'},
   {k:'jTip',l:'Stick tip',t:'select',opts:['ball','crown','star'],v:'ball'},
   {k:'jSpikes',l:'Spikes',min:3,max:14,step:1,v:4},
-  {k:'jSpikeH',l:'Spike height',min:10,max:120,step:1,v:60,u:'%'},
-  {k:'jGrooves',l:'Crown grooves',min:0,max:4,step:1,v:1},
+  {k:'jSpikeH',l:'Spike height',min:10,max:120,step:1,v:32,u:'%'},
+  {k:'jGrooves',l:'Crown grooves',min:0,max:5,step:1,v:2},
+  {k:'jRibs',l:'Crown ribs',min:0,max:4,step:1,v:2},
+  {k:'jBack',l:'Back row of points',t:'bool',v:false},
+  {k:'jShaft',l:'Shaft',t:'select',opts:['straight','tapered'],v:'straight'},
+  {k:'jRings',l:'Shaft texture rings',min:0,max:8,step:1,v:3},
  ]],
  ['Tile & color', true, [
   {k:'palette',l:'Palette',t:'select',opts:Object.keys(PALETTES),v:'Brophy red'},
@@ -276,7 +280,7 @@ const PRESETS = {
   'Off-road stamp': {tileOn:false,palette:'Black mark only',tile:'#161616',mark:'#161616',tStyle:'chunky',tDepth:16,tCount:18,tWidth:62,fTreadTip:3,cIcon:'hub',gap:7},
   'Wheel hub': {cIcon:'hub',ball:44,tCount:32,tDepth:8,tWidth:46,tStyle:'staggered',tTop:140,tBot:100},
   'Wheel & trigger': {rIcon:'wheel',trigger:true,lugs:true,lugStyle:'hex',fTrigger:3},
-  'Spiky stick': {jTip:'crown',jSpikes:4,jSpikeH:60,jGrooves:1,stLen:40,ball:26,stW:12,stAng:-80},
+  'Spiky stick': {jTip:'crown',jSpikes:4,jSpikeH:34,jGrooves:2,jRibs:2,jShaft:'tapered',jRings:3,stLen:30,ball:20,stW:12,stAng:-80},
   'Pistol trigger': {trigger:true,trStyle:'hook',trGuard:true,trX:35,trLen:70,trW:10,trTaper:70,trGuardW:4.5,fTrigger:2},
   'Wheel fused into R': {rIcon:'wheel',wSize:108,wTire:22,wSpokes:6,wHub:44,trigger:true,trGuard:true,fTrigger:2},
   'Gradient glow': {tileGrad:'radial',tile:'#D8293C',tile2:'#5E0A14',tileAng:225,tileSpread:100,markGrad:'linear',mark:'#FFFFFF',mark2:'#FFD3D8',markAng:90},
@@ -424,42 +428,62 @@ function blade(len, root, width, sweepDeg){
 }
 
 // joystick icons sized to a counter of radius Rc, stick pointing at ang; returns Clipper paths
-// joystick tip at (x,y) on a stick pointing at ang: plain ball, a spiky star, or a crown cap
-// seen from the side (CNC "spike" stick end: grooved barrel with a ring of points on top)
+// joystick tip at (x,y) on a stick pointing at ang: plain ball, a spiky star (seen from above),
+// or a crown cap seen from the side (CNC spike stick end: barrel with a ring of points, cut into a grid of pads)
 function stickTip(x,y,ang,r,p){
   if(p.jTip==='star'){ const n=p.jSpikes*2, out=[];
     for(let i=0;i<n;i++){ const a=rad(ang+i*360/n), rr=i%2?r*.78:r*(1+p.jSpikeH/100); out.push([x+rr*Math.cos(a),y+rr*Math.sin(a)]); }
     return {add:[out],cut:[]}; }
   if(p.jTip==='crown'){
-    const cw=r*2.1, ch=r*1.5, sh=cw*p.jSpikeH/100, n=p.jSpikes, q=[[-cw/2,0],[cw/2,0],[cw/2,-ch]];
-    for(let i=n-1;i>=0;i--){ q.push([-cw/2+cw*(i+.5)/n,-ch-sh]); if(i) q.push([-cw/2+cw*i/n,-ch]); }
-    q.push([-cw/2,-ch]);
-    const cut=[]; for(let i=0;i<p.jGrooves;i++){ const gy=-ch*(i+1)/(p.jGrooves+1); cut.push(place(rectPts(-cw*.36,gy-ch*.05,cw*.72,ch*.1),ang+90,x,y)); }
-    return {add:[place(q,ang+90,x,y)],cut};
+    // local frame: x across the cap, -y along the stick; the collar sits on the shaft top at y=0
+    const cw=r*2.6, ch=r*1.9, col=ch*.16, sh=cw*p.jSpikeH/100, n=p.jSpikes, add=[], cut=[];
+    add.push([[-cw*.34,0],[cw*.34,0],[cw/2,-col],[cw/2,-ch],[-cw/2,-ch],[-cw/2,-col]]); // collar + barrel
+    // front ring of points, plus smaller points peeking out from the back of the ring
+    const pts=[[-cw/2,-ch+.5]];
+    for(let i=0;i<n;i++){ const x0=-cw/2+cw*i/n, x1=-cw/2+cw*(i+1)/n; pts.push([x0,-ch],[(x0+x1)/2,-ch-sh],[x1,-ch]); }
+    pts.push([cw/2,-ch+.5]); add.push(pts);
+    if(p.jBack) for(let i=1;i<n;i++){ const xm=-cw/2+cw*i/n, hw=cw/n*.42; add.push([[xm-hw,-ch+.5],[xm,-ch-sh*.62],[xm+hw,-ch+.5]]); }
+    // grid: horizontal grooves broken by vertical ribs; the end slots notch the outline
+    const gh=ch*.075, rib=cw*.07, top=-ch*.9, bot=-col-ch*.06, segs=p.jRibs+1;
+    const slot=(x0,x1,gy)=>cut.push([[x0,gy-gh/2],[x1,gy-gh/2],[x1,gy+gh/2],[x0,gy+gh/2]]);
+    for(let g=0;g<p.jGrooves;g++){ const gy=bot+(top-bot)*(g+.5)/p.jGrooves;
+      if(segs===1){ slot(-cw/2-2,-cw*.28,gy); slot(cw*.28,cw/2+2,gy); continue; } // no ribs: notch the edges only, keep the barrel whole
+      for(let k=0;k<segs;k++) slot(-cw/2+cw*k/segs+(k?rib/2:-2), -cw/2+cw*(k+1)/segs+(k<segs-1?-rib/2:2), gy); }
+    return {add:add.map(q=>place(q,ang+90,x,y)),cut:cut.map(q=>place(q,ang+90,x,y))};
   }
   return {add:[circ(x,y,r)],cut:[]};
+}
+// stick shaft from (x0,y0) to (x1,y1): straight capsule, or tapered like a machined stick
+// (bulb at the base, thin neck, flare under the cap) with optional knurl notches along it
+function shaft(x0,y0,x1,y1,w,p){
+  if(p.jShaft!=='tapered') return {add:[capsule(x0,y0,x1,y1,w)],cut:[]};
+  const L=Math.hypot(x1-x0,y1-y0)||1, a=Math.atan2(y1-y0,x1-x0)*180/Math.PI;
+  const f=t=>.72+.62*Math.exp(-(((t-.05)/.1)**2))+.42*Math.exp(-(((t-1)/.14)**2));
+  const Lp=[], Rp=[]; for(let i=0;i<=24;i++){ const t=i/24, h=w/2*f(t); Lp.push([L*t,-h]); Rp.push([L*t,h]); }
+  const base=arcPts(0,0,w/2*f(0),90,270), add=[place([...base,...Lp,...Rp.reverse()],a,x0,y0)], cut=[];
+  for(let i=0;i<p.jRings;i++){ const t=.24+.56*(i+.5)/p.jRings, h=w/2*f(t), d=h*.32, th=Math.max(.6,w*.09);
+    cut.push(place([[L*t-th/2,-h-2],[L*t+th/2,-h-2],[L*t+th/2,-h+d],[L*t-th/2,-h+d]],a,x0,y0), place([[L*t-th/2,h-d],[L*t+th/2,h-d],[L*t+th/2,h+2],[L*t-th/2,h+2]],a,x0,y0)); }
+  return {add,cut};
 }
 // joystick icons sized to a counter of radius Rc, stick pointing at ang; returns Clipper paths
 function joystick(type,cx,cy,Rc,ang,p){
   const L=Rc*p.stLen/100, br=Rc*p.ball/100, w=Rc*p.stW/100, B=Rc*p.jBase/100, c=Math.cos(rad(ang)), s=Math.sin(rad(ang));
   const ring=(x,y,r,t)=>clip(CL.ClipType.ctDifference,[toC(circ(x,y,r))],[toC(circ(x,y,Math.max(.5,r-t)))]);
-  const U=(a,tip)=>{ const u=clip(CL.ClipType.ctUnion,[...a,...tip.add.map(toC)]); return tip.cut.length?clip(CL.ClipType.ctDifference,u,tip.cut.map(toC)):u; };
-  if(type==='stick'){
-    // a crown cap is long, so centre the whole stick + cap in the hole instead of hinging at the centre
-    const Lc=p.jTip==='crown'?br*1.5+br*2.1*p.jSpikeH/100:0, back=p.jTip==='crown'?(L*1.18+Lc)/2:L*.18, tip=-back+L*1.18;
-    return U([toC(capsule(cx-back*c,cy-back*s,cx+tip*c,cy+tip*s,w))],stickTip(cx+tip*c,cy+tip*s,ang,br,p));
-  }
+  // union the solid parts, then cut the shaft and tip textures
+  const U=(base,...parts)=>{ const u=clip(CL.ClipType.ctUnion,[...base,...parts.flatMap(q=>q.add.map(toC))]), cut=parts.flatMap(q=>q.cut);
+    return cut.length?clip(CL.ClipType.ctDifference,u,cut.map(toC)):u; };
+  const back=p.jShaft==='tapered'?0:L*.18; // a tapered stick's bulb sits right on the pivot
+  if(type==='stick') return U([],shaft(cx-back*c,cy-back*s,cx+L*c,cy+L*s,w,p),stickTip(cx+L*c,cy+L*s,ang,br,p));
   if(type==='gimbal') // transmitter gimbal from above: travel ring, pivot, stick, tip
-    return U([...ring(cx,cy,B,w*.75),toC(circ(cx,cy,w*.95)),toC(capsule(cx,cy,cx+L*c,cy+L*s,w))],stickTip(cx+L*c,cy+L*s,ang,br,p));
+    return U([...ring(cx,cy,B,w*.75),toC(circ(cx,cy,w*.95))],shaft(cx,cy,cx+L*c,cy+L*s,w,p),stickTip(cx+L*c,cy+L*s,ang,br,p));
   if(type==='thumbstick'){ // game-controller stick from above: base ring and a tilted, grooved cap (spiky rim if not a ball)
     const px=cx+L*.3*c, py=cy+L*.3*s, cr=Math.max(br*1.7,B*.45);
     const rim=p.jTip==='ball'?[toC(circ(px,py,cr))]:stickTip(px,py,ang,cr*.9,{...p,jTip:'star'}).add.map(toC);
-    const cap=clip(CL.ClipType.ctDifference,rim,ring(px,py,cr*.72,cr*.16));
-    return U([...ring(cx,cy,B,w*.7),...cap],{add:[],cut:[]});
+    return U([...ring(cx,cy,B,w*.7),...clip(CL.ClipType.ctDifference,rim,ring(px,py,cr*.72,cr*.16))]);
   }
   // arcade stick seen from the side: base plate, dome, shaft, tip
   const bx=cx-L*.45*c, by=cy-L*.45*s, tx=cx+L*.55*c, ty=cy+L*.55*s;
-  return U([toC(place(rectPts(-B*.65,-w*.65,B*1.3,w*1.3,w*.5),ang+90,bx,by)),toC(circ(bx,by,w*1.2)),toC(capsule(bx,by,tx,ty,w*.8))],stickTip(tx,ty,ang,br*1.15,p));
+  return U([toC(place(rectPts(-B*.65,-w*.65,B*1.3,w*1.3,w*.5),ang+90,bx,by)),toC(circ(bx,by,w*1.2))],shaft(bx,by,tx,ty,w*.8,p),stickTip(tx,ty,ang,br*1.15,p));
 }
 
 // ---------- the mark ----------
@@ -612,7 +636,7 @@ function build(p, opts={}){
     if(hub>0) TOP.push(circ(hx,hy,hub));
   }
   // inside the C
-  if(['gimbal','thumbstick','arcade'].includes(p.cIcon)||(p.cIcon==='stick'&&p.jTip!=='ball')) TOPdone.push(...joystick(p.cIcon,ccx,ccy,Ri,p.stAng,p));
+  if(['gimbal','thumbstick','arcade'].includes(p.cIcon)||(p.cIcon==='stick'&&(p.jTip!=='ball'||p.jShaft!=='straight'))) TOPdone.push(...joystick(p.cIcon,ccx,ccy,Ri,p.stAng,p));
   else if(p.cIcon==='stick'){
     const L=Ri*p.stLen/100, c=Math.cos(rad(p.stAng)), s=Math.sin(rad(p.stAng));
     TOP.push(capsule(ccx-L*.18*c,ccy-L*.18*s,ccx+L*c,ccy+L*s,Ri*p.stW/100), circ(ccx+L*c,ccy+L*s,Ri*p.ball/100));
@@ -749,7 +773,7 @@ function sync(){
   dim(['holeR'],!P.matchHoles); dim(['hCorner','hSide'],!P.hBox); dim(['cW'],P.matchHoles);
   dim(['baseW','baseH','flare','door','tiers','tierH','tierGap','taper','tierSlant','mastGap','crossW','crossY','crossTilt'],P.ant!=='steeple');
   const J=['stick','gimbal','thumbstick','arcade'], jC=J.includes(P.cIcon), jR=J.includes(P.rIcon);
-  dim(['stAng'],!jC); dim(['rjAng'],!jR); dim(['stLen','stW','jBase','jTip'],!jC&&!jR); dim(['jSpikes','jSpikeH'],(!jC&&!jR)||P.jTip==='ball'); dim(['jGrooves'],(!jC&&!jR)||P.jTip!=='crown'); dim(['ball'],P.cIcon==='none'&&!jR);
+  dim(['stAng'],!jC); dim(['rjAng'],!jR); dim(['stLen','stW','jBase','jTip'],!jC&&!jR); dim(['jSpikes','jSpikeH'],(!jC&&!jR)||P.jTip==='ball'); dim(['jGrooves','jRibs','jBack'],(!jC&&!jR)||P.jTip!=='crown'); dim(['jShaft'],!jC&&!jR); dim(['jRings'],(!jC&&!jR)||P.jShaft!=='tapered'); dim(['ball'],P.cIcon==='none'&&!jR);
   dim(['tile2','tileAng','tileSpread'],P.tileGrad==='solid'||!P.tileOn); dim(['tileGrad'],!P.tileOn); dim(['mark2','markAng','markSpread'],P.markGrad==='solid');
   dim(['shape','tileR'],!P.tileOn); if(P.shape!=='rounded') dim(['tileR'],true);
   dim(['gapUp'],!P.gap);
